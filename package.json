@@ -110,6 +110,42 @@
           "type": "string",
           "default": "",
           "description": "Full path to the linting rules file to use. See https://github.com/projectatomic/dockerfile_lint#extending-and-customizing-rule-files) for sample files and how to create your own."
+        },
+        "docker.languageserver.diagnostics.deprecatedMaintainer": {
+          "type": "string",
+          "default": "warning",
+          "enum": [ "ignore", "warning", "error" ],
+          "description": "Controls the diagnostic severity for the deprecated MAINTAINER instruction."
+        },
+        "docker.languageserver.diagnostics.directiveCasing": {
+          "type": "string",
+          "default": "warning",
+          "enum": [ "ignore", "warning", "error" ],
+          "description": "Controls the diagnostic severity for parser directives that are not written in lowercase."
+        },
+        "docker.languageserver.diagnostics.instructionCasing": {
+          "type": "string",
+          "default": "warning",
+          "enum": [ "ignore", "warning", "error" ],
+          "description": "Controls the diagnostic severity for instructions that are not written in uppercase."
+        },
+        "docker.languageserver.diagnostics.instructionCmdMultiple": {
+          "type": "string",
+          "default": "warning",
+          "enum": [ "ignore", "warning", "error" ],
+          "description": "Controls the diagnostic severity for flagging a Dockerfile with multiple CMD instructions."
+        },
+        "docker.languageserver.diagnostics.instructionEntrypointMultiple": {
+          "type": "string",
+          "default": "warning",
+          "enum": [ "ignore", "warning", "error" ],
+          "description": "Controls the diagnostic severity for flagging a Dockerfile with multiple ENTRYPOINT instructions."
+        },
+        "docker.languageserver.diagnostics.instructionHealthcheckMultiple": {
+          "type": "string",
+          "default": "warning",
+          "enum": [ "ignore", "warning", "error" ],
+          "description": "Controls the diagnostic severity for flagging a Dockerfile with multiple HEALTHCHECK instructions."
         }
       }
     },
@@ -210,7 +246,9 @@
   },
   "dependencies": {
     "dockerfile_lint": "^0.2.6",
+    "dockerfile-language-server-nodejs": "^0.0.2",
     "dockerode": "^2.3.2",
-    "vscode-extension-telemetry": "^0.0.6"
+    "vscode-extension-telemetry": "^0.0.6",
+    "vscode-languageclient": "^3.1.0"
   }
 }

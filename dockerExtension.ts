@@ -2,6 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
+import * as path from 'path';
 import { DockerHoverProvider } from './dockerHoverProvider';
 import { DockerfileCompletionItemProvider } from './dockerfile/dockerfileCompletionItemProvider';
 import { DockerComposeCompletionItemProvider } from './dockerCompose/dockerComposeCompletionItemProvider';
@@ -25,6 +26,7 @@ import { scheduleValidate } from './linting/dockerLinting';
 import { systemPrune } from './commands/system-prune';
 import { Reporter } from './telemetry/telemetry';
 import DockerInspectDocumentContentProvider, { SCHEME as DOCKER_INSPECT_SCHEME } from './documentContentProviders/dockerInspect';
+import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, TransportKind } from 'vscode-languageclient';
 
 export const FROM_DIRECTIVE_PATTERN = /^\s*FROM\s*([\w-\/:]*)(\s*AS\s*[a-z][a-z0-9-_\\.]*)?$/i;
 
@@ -83,4 +85,28 @@ export function activate(ctx: vscode.ExtensionContext): void {
     vscode.workspace.textDocuments.forEach((doc) => scheduleValidate(doc));
     vscode.workspace.onDidOpenTextDocument((doc) => scheduleValidate(doc), ctx.subscriptions);
     vscode.workspace.onDidCloseTextDocument((doc) => diagnosticCollection.delete(doc.uri), ctx.subscriptions);
+
+    activateLanguageClient(ctx);
+}
+
+function activateLanguageClient(ctx: vscode.ExtensionContext) {
+    let serverModule = ctx.asAbsolutePath(path.join("node_modules", "dockerfile-language-server-nodejs", "lib", "server.js"));
+    let debugOptions = { execArgv: ["--nolazy", "--debug=6009"] };
+
+    let serverOptions: ServerOptions = {
+        run: { module: serverModule, transport: TransportKind.ipc, args: ["--node-ipc"] },
+        debug: { module: serverModule, transport: TransportKind.ipc, options: debugOptions }
+    }
+
+    let clientOptions: LanguageClientOptions = {
+        documentSelector: ['dockerfile'],
+        synchronize: {
+            configurationSection: 'docker.languageserver',
+            // detect configuration changes
+            fileEvents: vscode.workspace.createFileSystemWatcher('**/.clientrc')
+        }
+    }
+
+    let disposable = new LanguageClient("dockerfile-langserver", "Dockerfile Language Server", serverOptions, clientOptions).start();
+    ctx.subscriptions.push(disposable);
 }
