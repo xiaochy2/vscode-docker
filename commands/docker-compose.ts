@@ -47,9 +47,11 @@ export async function compose(command: string, message: string) {
     } else {
         const items: vscode.QuickPickItem[] = computeItems(uris);
         const selectedItem: Item = <Item>await vscode.window.showQuickPick(items, { placeHolder: `Choose Docker Compose file ${message}` });
+        const params: string = command === 'up' ? '-d --build': '';
+
         if (selectedItem) {
             const terminal: vscode.Terminal = vscode.window.createTerminal('Docker Compose');
-            terminal.sendText(`docker-compose -f ${selectedItem.file} ${command} -d --build`);
+            terminal.sendText(`docker-compose -f ${selectedItem.file} ${command} ${params}`);
             terminal.show();
             if (reporter) {
                 reporter.sendTelemetryEvent('command', {
