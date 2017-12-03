@@ -169,7 +169,8 @@ export class AzureRepositoryNode extends NodeBase {
                 form: {
                     grant_type: 'refresh_token',
                     service: element.repository,
-                    scope: 'repository:' + element.label + ':pull',
+                    // scope: 'repository:' + element.label + ':pull',
+                    scope: 'repository:' + element.label + ':*',
                     refresh_token: refreshTokenARC
                 }
             }, (err, httpResponse, body) => {
@@ -193,15 +194,28 @@ export class AzureRepositoryNode extends NodeBase {
 
             for (let i = 0; i < tags.length; i++) {
                 created = '';
-                let manifest = JSON.parse(await request.get('https://' + element.repository + '/v2/' + element.label + '/manifests/latest', {
+                //let manifest = JSON.parse(await request.get('https://' + element.repository + '/v2/' + element.label + '/manifests/' + tags[i], {
+                let manifest = JSON.parse(await request.get(`https://${element.repository}/v2/${element.label}/manifests/${tags[i]}`, {
                     auth: { bearer: accessTokenARC }
                 }));
+                let digest = JSON.parse(await request.get(`https://${element.repository}/v2/${element.label}/manifests/${tags[i]}`, {
+                    auth: { bearer: accessTokenARC },
+                    headers: {
+                        Accept: 'application/vnd.docker.distribution.manifest.v2+json'
+                    }
+                }));
+
+
                 created = moment(new Date(JSON.parse(manifest.history[0].v1Compatibility).created)).fromNow();
 
                 node = new AzureImageNode(`${element.label}:${tags[i]} (${created})`, 'azureImageTag');
                 node.serverUrl = element.repository;
                 node.userName = element.userName;
                 node.password = element.password;
+                node.accessTokenARC = accessTokenARC;
+                node.manifest = manifest;
+                node.digest = digest;
+
                 imageNodes.push(node);
 
             }
@@ -222,6 +236,9 @@ export class AzureImageNode extends NodeBase {
     public serverUrl: string;
     public userName: string;
     public password: string;
+    public manifest;
+    public accessTokenARC;
+    public digest;
 
     getTreeItem(): vscode.TreeItem {
         return {
@@ -230,6 +247,46 @@ export class AzureImageNode extends NodeBase {
             contextValue: this.contextValue
         }
     }
+}
+
+export async function deleteAzureImage(ctx: AzureImageNode) {
+//scope="repository:web:*",error="insufficient_scope"
+    console.log(ctx);
+
+    // await request.post('https://' + element.repository + '/oauth2/token', {
+    //     form: {
+    //         grant_type: 'refresh_token',
+    //         service: element.repository,
+    //         scope: 'repository:' + element.label + ':*',
+    //         refresh_token: refreshTokenARC
+    //     }
+    // }, (err, httpResponse, body) => {
+    //     if (body.length > 0) {
+    //         accessTokenARC = JSON.parse(body).access_token;
+    //     } else {
+    //         return [];
+    //     }
+    // });
+
+    console.log(ctx.digest.config.digest);
+    
+    let url: string = `https://${ctx.serverUrl}/v2/${ctx.manifest.name}/manifests/${ctx.digest.config.digest}`
+
+
+    let res = await request.delete(`${url}`, {
+        auth: { bearer: ctx.accessTokenARC }
+    }, (err, httpResponse, body) => {
+        console.log(err);
+        console.log(httpResponse);
+        console.log(body);
+    });
+
+
+    // ctx.digest.config.digest 
+    // ctx.manifest.name
+    // ctx.manifest.tag
+    // ctx.serverUrl
+
 }
 
 export class AzureNotSignedInNode extends NodeBase {
