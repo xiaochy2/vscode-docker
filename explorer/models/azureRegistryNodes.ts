@@ -203,7 +203,12 @@ export class AzureRepositoryNode extends NodeBase {
                     headers: {
                         Accept: 'application/vnd.docker.distribution.manifest.v2+json'
                     }
+                }, (err, httpResponse, body) => {
+                    console.log(err);
+                    console.log(httpResponse);
+                    console.log(body);
                 }));
+
 
 
                 created = moment(new Date(JSON.parse(manifest.history[0].v1Compatibility).created)).fromNow();
