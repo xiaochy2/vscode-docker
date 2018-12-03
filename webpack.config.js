@@ -27,10 +27,10 @@ const externalModules = [
     // Keep this list small, because all the subdependencies will also have to not be webpacked.
 
     // has binary
-    'clipboardy',
+    //'clipboardy',
 
     // has binary
-    'win-ca'
+    //'win-ca'
 ];
 
 // External modules and all their dependencies and subdependencies (these will not be webpacked)

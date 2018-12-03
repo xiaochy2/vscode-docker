@@ -17,8 +17,6 @@ export interface ContainerItem extends vscode.QuickPickItem {
     allContainers: boolean;
 }
 
-syntax Error;
-
 function createItem(container: Docker.ContainerDesc): ContainerItem {
     return <ContainerItem>{
         label: container.Image,
