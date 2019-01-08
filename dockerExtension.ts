@@ -103,9 +103,7 @@ function initializeExtensionVariables(ctx: vscode.ExtensionContext): void {
   registerUIExtensionVariables(ext);
 }
 
-export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: { loadStartTime: number, loadEndTime: number | undefined }): Promise<void> {
-  perfStats.loadEndTime = Date.now();
-
+export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: { loadStartTime: number, loadEndTime: number }): Promise<void> {
   initializeExtensionVariables(ctx);
   await setRequestDefaults();
   await callWithTelemetryAndErrorHandling('docker.activate', async function (this: IActionContext): Promise<void> {
