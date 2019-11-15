@@ -15,6 +15,7 @@ import { ResolvedDebugConfiguration } from './DebugHelper';
 import { Server } from 'http';
 import { ext } from '../extensionVariables';
 import { join } from 'path';
+import LineSplitter from './coreclr/lineSplitter';
 
 // tslint:disable-next-line: no-any
 const localize = (message: string, ...param: any[]): string => {
@@ -182,7 +183,7 @@ type LogStream = NodeJS.ReadableStream & { destroy(): void; };
 class DockerLogsTracker extends vscode.Disposable {
     private logStream: LogStream;
 
-    constructor(containerName: string, private readonly detector: DockerServerReadyManager) {
+    constructor(containerName: string, detector: DockerServerReadyManager) {
         super(
             () => {
                 if (this.logStream) {
@@ -199,17 +200,23 @@ class DockerLogsTracker extends vscode.Disposable {
             },
             (err, stream) => {
                 if (err) {
-                    // TODO: Log error. Dispose of ourselves?
+                    // TODO: Log error.
                     return;
                 }
 
-                this.logStream = <LogStream>stream;
-                this.logStream.on('data', this.onData);
-            });
-    }
+                const lineSplitter = new LineSplitter();
+                lineSplitter.onLine(
+                    (line: string) => {
+                        detector.detectPattern(line);
+                    });
 
-    // tslint:disable-next-line: no-any
-    private onData(data: any): void {
+                this.logStream = <LogStream>stream;
+                this.logStream.on(
+                    'data',
+                    (data: Buffer) => {
+                        lineSplitter.write(data.toString());
+                    });
+            });
     }
 }
 
