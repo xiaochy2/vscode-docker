@@ -193,25 +193,32 @@ export class ServerReadyDetector extends vscode.Disposable {
     }
 }
 
+class DockerServerReadyDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+    private static readonly trackers: Set<string> = new Set<string>();
+
+    constructor(private readonly context: vscode.ExtensionContext) {
+    }
+
+    public resolveDebugConfiguration?(folder: vscode.WorkspaceFolder | undefined, debugConfiguration: ResolvedDebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+        if (debugConfiguration && debugConfiguration.type && debugConfiguration.dockerOptions && debugConfiguration.dockerOptions.dockerServerReadyAction) {
+            if (!DockerServerReadyDebugConfigurationProvider.trackers.has(debugConfiguration.type)) {
+                DockerServerReadyDebugConfigurationProvider.trackers.add(debugConfiguration.type);
+                this.context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory(debugConfiguration.type, new DockerDebugAdapterTrackerFactory()));
+            }
+        }
+        return debugConfiguration;
+    }
+}
+
 export function registerServerReadyAction(context: vscode.ExtensionContext): void {
 
-    context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
-        ServerReadyDetector.stop(session);
-    }));
+    context.subscriptions.push(
+        vscode.debug.onDidTerminateDebugSession(
+            session => {
+                ServerReadyDetector.stop(session);
+            }));
 
-    const trackers = new Set<string>();
-
-    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('*', {
-        resolveDebugConfiguration(_folder: vscode.WorkspaceFolder | undefined, debugConfiguration: ResolvedDebugConfiguration): vscode.DebugConfiguration {
-            if (debugConfiguration && debugConfiguration.type && debugConfiguration.dockerOptions && debugConfiguration.dockerOptions.dockerServerReadyAction) {
-                if (!trackers.has(debugConfiguration.type)) {
-                    trackers.add(debugConfiguration.type);
-                    startTrackerForType(context, debugConfiguration.type);
-                }
-            }
-            return debugConfiguration;
-        }
-    }));
+    context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('*', new DockerServerReadyDebugConfigurationProvider(context)));
 }
 
 type DebugAdaptorMessage = {
@@ -255,8 +262,4 @@ class DockerDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFact
 
         return undefined;
     }
-}
-
-function startTrackerForType(context: vscode.ExtensionContext, type: string): void {
-    context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory(type, new DockerDebugAdapterTrackerFactory()));
 }
