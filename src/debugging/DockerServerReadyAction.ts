@@ -214,33 +214,49 @@ export function registerServerReadyAction(context: vscode.ExtensionContext): voi
     }));
 }
 
-function startTrackerForType(context: vscode.ExtensionContext, type: string): void {
+type DebugAdaptorMessage = {
+    body?: {
+        category?: string;
+        output?: string;
+    };
+    type?: string;
+    event?: string;
+};
 
-    // scan debug console output for a PORT message
-    context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory(type, {
-        createDebugAdapterTracker(session: vscode.DebugSession): vscode.DebugAdapterTracker {
-            const detector = ServerReadyDetector.start(session);
-            if (detector) {
-                return {
-                    // tslint:disable: no-unsafe-any
-                    onDidSendMessage: m => {
-                        if (m.type === 'event' && m.event === 'output' && m.body) {
-                            switch (m.body.category) {
-                                case 'console':
-                                case 'stderr':
-                                case 'stdout':
-                                    if (m.body.output) {
-                                        detector.detectPattern(m.body.output);
-                                    }
-                                    break;
-                                default:
-                            }
-                        }
-                    }
-                    // tslint:enable: no-unsafe-any
-                };
+class DockerDebugAdapterTracker implements vscode.DebugAdapterTracker {
+    constructor(private readonly detector: ServerReadyDetector) {
+    }
+
+    public onDidSendMessage = (m: DebugAdaptorMessage) => {
+        if (m.type === 'event'
+            && m.event === 'output'
+            && m.body
+            && m.body.category
+            && m.body.output) {
+            switch (m.body.category) {
+                case 'console':
+                case 'stderr':
+                case 'stdout':
+                    this.detector.detectPattern(m.body.output);
+                    break;
+                default:
             }
-            return undefined;
         }
-    }));
+    }
+}
+
+class DockerDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {
+    public createDebugAdapterTracker(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+        const detector = ServerReadyDetector.start(session);
+
+        if (detector) {
+            return new DockerDebugAdapterTracker(detector);
+        }
+
+        return undefined;
+    }
+}
+
+function startTrackerForType(context: vscode.ExtensionContext, type: string): void {
+    context.subscriptions.push(vscode.debug.registerDebugAdapterTrackerFactory(type, new DockerDebugAdapterTrackerFactory()));
 }
