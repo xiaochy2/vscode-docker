@@ -12,6 +12,9 @@ import * as vscode from 'vscode';
 import ChildProcessProvider from './coreclr/ChildProcessProvider';
 import CliDockerClient from './coreclr/CliDockerClient';
 import { ResolvedDebugConfiguration } from './DebugHelper';
+import { Server } from 'http';
+import { ext } from '../extensionVariables';
+import { join } from 'path';
 
 // tslint:disable-next-line: no-any
 const localize = (message: string, ...param: any[]): string => {
@@ -39,7 +42,7 @@ export class ServerReadyDetector {
             'i');
     }
 
-    public detectPattern(s: string): void {
+    public detectPattern(s: string): boolean {
 
         if (!this.hasFired) {
             const matches = this.regexp.exec(s);
@@ -49,6 +52,8 @@ export class ServerReadyDetector {
                 this.hasFired = true;
             }
         }
+
+        return this.hasFired;
     }
 
     private async openExternalWithString(session: vscode.DebugSession, captureString: string): Promise<void> {
@@ -168,8 +173,53 @@ type DebugAdaptorMessage = {
     event?: string;
 };
 
-class DockerDebugAdapterTracker implements vscode.DebugAdapterTracker {
-    constructor(private readonly detector: ServerReadyDetector) {
+interface DockerServerReadyManager {
+    detectPattern(output: string): void;
+}
+
+type LogStream = NodeJS.ReadableStream & { destroy(): void; };
+
+class DockerLogsTracker extends vscode.Disposable {
+    private logStream: LogStream;
+
+    constructor(containerName: string, private readonly detector: DockerServerReadyManager) {
+        super(
+            () => {
+                if (this.logStream) {
+                    this.logStream.destroy();
+                }
+            });
+
+        const container = ext.dockerode.getContainer(containerName);
+
+        container.logs(
+            {
+                follow: true,
+                stdout: true
+            },
+            (err, stream) => {
+                if (err) {
+                    // TODO: Log error. Dispose of ourselves?
+                    return;
+                }
+
+                this.logStream = <LogStream>stream;
+                this.logStream.on('data', this.onData);
+            });
+    }
+
+    // tslint:disable-next-line: no-any
+    private onData(data: any): void {
+    }
+}
+
+class DockerDebugAdapterTracker extends vscode.Disposable implements vscode.DebugAdapterTracker {
+    constructor(private readonly detector: DockerServerReadyManager) {
+        super(
+            () => {
+                // Stop responding to messages...
+                this.onDidSendMessage = undefined;
+            });
     }
 
     public onDidSendMessage = (m: DebugAdaptorMessage) => {
@@ -190,8 +240,48 @@ class DockerDebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 }
 
+class MultiOutputDockerServerReadyManager extends vscode.Disposable implements DockerServerReadyManager {
+    private readonly detector: ServerReadyDetector;
+    private readonly logsTracker: DockerLogsTracker;
+    private readonly _tracker: DockerDebugAdapterTracker;
+
+    constructor(session: vscode.DebugSession) {
+        super(
+            () => {
+                if (this.logsTracker) {
+                    this.logsTracker.dispose();
+                }
+
+                this._tracker.dispose();
+            });
+
+        this.detector = new ServerReadyDetector(session);
+
+        const configuration = <ResolvedDebugConfiguration>session.configuration;
+
+        if (configuration
+            && configuration.dockerOptions
+            && configuration.dockerOptions.dockerServerReadyAction
+            && configuration.dockerOptions.dockerServerReadyAction.containerName) {
+            this.logsTracker = new DockerLogsTracker(configuration.dockerOptions.dockerServerReadyAction.containerName, this);
+        }
+
+        this._tracker = new DockerDebugAdapterTracker(this);
+    }
+
+    public detectPattern(output: string): void {
+        if (this.detector.detectPattern(output)) {
+            this.dispose();
+        }
+    }
+
+    public get tracker(): DockerDebugAdapterTracker {
+        return this._tracker;
+    }
+}
+
 class DockerDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {
-    private static trackers: Map<vscode.DebugSession, DockerDebugAdapterTracker> = new Map<vscode.DebugSession, DockerDebugAdapterTracker>();
+    private static trackers: Map<vscode.DebugSession, MultiOutputDockerServerReadyManager> = new Map<vscode.DebugSession, MultiOutputDockerServerReadyManager>();
 
     public static start(session: vscode.DebugSession): DockerDebugAdapterTracker | undefined {
         const configuration = <ResolvedDebugConfiguration>session.configuration;
@@ -200,10 +290,10 @@ class DockerDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFact
             && configuration.dockerOptions.dockerServerReadyAction) {
             let tracker = DockerDebugAdapterTrackerFactory.trackers.get(session);
             if (!tracker) {
-                tracker = new DockerDebugAdapterTracker(new ServerReadyDetector(session));
+                tracker = new MultiOutputDockerServerReadyManager(session);
                 DockerDebugAdapterTrackerFactory.trackers.set(session, tracker);
             }
-            return tracker;
+            return tracker.tracker;
         }
         return undefined;
     }
@@ -212,7 +302,7 @@ class DockerDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFact
         let tracker = DockerDebugAdapterTrackerFactory.trackers.get(session);
         if (tracker) {
             DockerDebugAdapterTrackerFactory.trackers.delete(session);
-            // TODO: Dispose of tracker?
+            tracker.dispose();
         }
     }
 
