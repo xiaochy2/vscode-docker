@@ -9,13 +9,11 @@
 
 import * as util from 'util';
 import * as vscode from 'vscode';
+import { ext } from '../extensionVariables';
 import ChildProcessProvider from './coreclr/ChildProcessProvider';
 import CliDockerClient from './coreclr/CliDockerClient';
-import { ResolvedDebugConfiguration } from './DebugHelper';
-import { Server } from 'http';
-import { ext } from '../extensionVariables';
-import { join } from 'path';
 import LineSplitter from './coreclr/lineSplitter';
+import { ResolvedDebugConfiguration } from './DebugHelper';
 
 // tslint:disable-next-line: no-any
 const localize = (message: string, ...param: any[]): string => {
