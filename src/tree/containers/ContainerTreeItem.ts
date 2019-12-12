@@ -12,6 +12,7 @@ import { LocalContainerInfo } from "./LocalContainerInfo";
 
 export class ContainerTreeItem extends AzExtTreeItem {
     public static allContextRegExp: RegExp = /Container$/;
+    public static runningContainerRegExp: RegExp = /^runningContainer$/i;
     private readonly _item: LocalContainerInfo;
 
     public constructor(parent: AzExtParentTreeItem, itemInfo: LocalContainerInfo) {
@@ -29,6 +30,10 @@ export class ContainerTreeItem extends AzExtTreeItem {
 
     public get containerId(): string {
         return this._item.containerId;
+    }
+
+    public get containerName(): string {
+        return this._item.containerName;
     }
 
     public get fullTag(): string {
