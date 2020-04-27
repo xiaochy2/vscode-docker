@@ -6,15 +6,18 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { PythonExtensionHelper } from '../../tasks/python/PythonExtensionHelper';
 import { PythonDefaultDebugPort, PythonProjectType } from '../../utils/pythonUtils';
 import ChildProcessProvider from '../coreclr/ChildProcessProvider';
 import CliDockerClient from '../coreclr/CliDockerClient';
+import { DefaultOutputManager } from '../coreclr/outputManager';
 import { DebugHelper, DockerDebugContext, DockerDebugScaffoldContext, inferContainerName, ResolvedDebugConfiguration, resolveDockerServerReadyAction } from '../DebugHelper';
 import { DockerDebugConfigurationBase } from '../DockerDebugConfigurationBase';
 import { DockerDebugConfiguration } from '../DockerDebugConfigurationProvider';
 import { PythonScaffoldingOptions } from '../DockerDebugScaffoldingProvider';
+import { DebugpyClient } from './debugpyClient';
 
 export interface PythonPathMapping {
     localRoot: string;
@@ -36,8 +39,25 @@ export interface PythonDockerDebugConfiguration extends DockerDebugConfiguration
 }
 
 export class PythonDebugHelper implements DebugHelper {
+    private readonly debugpyClientFactory: () => DebugpyClient;
+    private debugpyClient: DebugpyClient;
+
     public constructor(
         private readonly cliDockerClient: CliDockerClient) {
+
+        const processProvider = new ChildProcessProvider();
+
+        this.debugpyClientFactory = () => {
+            if (this.debugpyClient === undefined) {
+                this.debugpyClient = new DebugpyClient(
+                    new DefaultOutputManager(ext.outputChannel),
+                    ext.context.globalState,
+                    processProvider
+                );
+            }
+
+            return this.debugpyClient;
+        };
     }
 
     public async provideDebugConfigurations(context: DockerDebugScaffoldContext, options?: PythonScaffoldingOptions): Promise<DockerDebugConfiguration[]> {
@@ -73,6 +93,8 @@ export class PythonDebugHelper implements DebugHelper {
 
         const debuggerLogFilePath = await PythonExtensionHelper.getDebuggerLogFilePath(context.folder.name);
         await fse.remove(debuggerLogFilePath);
+
+        await this.debugpyClientFactory().AcquireDebugger();
 
         let debuggerReadyPromise = Promise.resolve();
         if (debugConfiguration.preLaunchTask) {
@@ -114,8 +136,6 @@ export class PythonDebugHelper implements DebugHelper {
                 },
                 true);
 
-        // These properties are required by the old debugger, should be changed to normal properties in the configuration
-        // as soon as the new debugger is released to 100% of the users.
         const debugOptions = ['FixFilePathCase', 'RedirectOutput', 'ShowReturnValue'];
 
         if (os.platform() === 'win32') {
@@ -127,8 +147,10 @@ export class PythonDebugHelper implements DebugHelper {
             type: 'python',
             request: 'attach',
             workspaceFolder: context.folder.uri.fsPath,
-            host: debugConfiguration.python.host || 'localhost',
-            port: debugConfiguration.python.port || PythonDefaultDebugPort,
+            connect: {
+                host: debugConfiguration.python.host || 'localhost',
+                port: debugConfiguration.python.port || PythonDefaultDebugPort,
+            },
             pathMappings: debugConfiguration.python.pathMappings,
             justMyCode: debugConfiguration.python.justMyCode || true,
             django: debugConfiguration.python.django || projectType === 'django',

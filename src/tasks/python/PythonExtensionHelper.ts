@@ -6,6 +6,7 @@
 // This will eventually be replaced by an API in the Python extension. See https://github.com/microsoft/vscode-python/issues/7282
 
 import * as fse from 'fs-extra';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from "vscode";
 import CliDockerClient from '../../debugging/coreclr/CliDockerClient';
@@ -22,14 +23,14 @@ export namespace PythonExtensionHelper {
     }
 
     export function getDebuggerEnvironmentVars(): { [key: string]: string } {
-        return { 'PTVSD_LOG_DIR': '/dbglogs' };
+        return { 'DEBUGPY_LOG_DIR': '/dbglogs' };
     }
 
     export async function getDebuggerLogFilePath(folderName: string): Promise<string> {
         // The debugger generates the log file with the name in this format: ptvsd-{pid}.log,
         // So given that we run the debugger as the entry point, then the PID is guaranteed to be 1.
         const tempDir = await getTempDirectoryPath();
-        return path.join(tempDir, folderName, 'ptvsd-1.log');
+        return path.join(tempDir, folderName, 'debugpy.server-1.log');
     }
 
     export async function ensureDebuggerReady(prelaunchTask: vscode.Task, debuggerSemaphorePath: string, containerName: string, cliDockerClient: CliDockerClient): Promise<void> {
@@ -62,7 +63,7 @@ export namespace PythonExtensionHelper {
                             if (await fse.pathExists(debuggerSemaphorePath)) {
                                 const contents = await fse.readFile(debuggerSemaphorePath);
 
-                                created = contents.toString().indexOf('Starting server daemon on') >= 0;
+                                created = contents.toString().indexOf('Adapter is accepting incoming client connections') >= 0;
                                 if (created) {
                                     break;
                                 }
@@ -108,7 +109,7 @@ export namespace PythonExtensionHelper {
         options.wait = !!options.wait;
         args = args ?? [];
 
-        return `/pydbg/ptvsd --host ${options.host} --port ${options.port} ${options.wait ? '--wait' : ''} ${fullTarget} ${args.join(' ')}`;
+        return `/debugger/debugpy --listen ${options.host}:${options.port} ${options.wait ? '--wait-for-client' : ''} ${fullTarget} ${args.join(' ')}`;
     }
 
     export async function getLauncherFolderPath(): Promise<string> {
@@ -126,20 +127,7 @@ export namespace PythonExtensionHelper {
             return undefined;
         }
 
-        const debuggerPath = path.join(pyExt.extensionPath, 'pythonFiles', 'lib', 'python');
-        const oldDebugger = path.join(debuggerPath, 'old_ptvsd');
-        const newDebugger = path.join(debuggerPath, 'new_ptvsd');
-
-        // Always favor the old_ptvsd debugger since it will work in all cases.
-        // If it is not found, then look for the new instead.
-        // TODO: This should be revisited when the Python extension releases the new debugger since it might have a different name.
-
-        if ((await fse.pathExists(oldDebugger))) {
-            return oldDebugger;
-        } else if ((await fse.pathExists(newDebugger))) {
-            return newDebugger;
-        }
-
-        throw new Error(localize('vscode-docker.tasks.pythonExt.noDebugger', 'Unable to find the debugger in the Python extension.'));
+        await pyExt.activate();
+        return path.join(os.homedir(), '.debugpy');
     }
 }
