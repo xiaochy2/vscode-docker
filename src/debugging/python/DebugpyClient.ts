@@ -1,8 +1,14 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as os from 'os';
 import * as path from 'path';
 import { Memento } from "vscode";
 import { localize } from '../../localize';
 import { ProcessProvider } from '../coreclr/ChildProcessProvider';
+import { FileSystemProvider } from '../coreclr/fsProvider';
 import { OutputManager } from "../coreclr/outputManager";
 
 export class DebugpyClient {
@@ -11,12 +17,15 @@ export class DebugpyClient {
     public constructor(
         private readonly dockerOutputManager: OutputManager,
         private readonly globalState: Memento,
-        private readonly processProvider: ProcessProvider) { }
+        private readonly processProvider: ProcessProvider,
+        private readonly fileSystemProvider: FileSystemProvider) { }
 
     public async AcquireDebugger(): Promise<string> {
         const debuggerPath: string = path.join(os.homedir(), '.debugpy');
+        const exists = await this.fileSystemProvider.dirExists(debuggerPath);
+        const isUpToDate = await this.isUpToDate(this.lastDebuggerAcquisitionKey());
 
-        if (await this.isUpToDate(this.lastDebuggerAcquisitionKey())) {
+        if (exists && isUpToDate) {
             // The debugger is up to date...
             return debuggerPath;
         }

@@ -12,6 +12,7 @@ import { PythonExtensionHelper } from '../../tasks/python/PythonExtensionHelper'
 import { PythonDefaultDebugPort, PythonProjectType } from '../../utils/pythonUtils';
 import ChildProcessProvider from '../coreclr/ChildProcessProvider';
 import CliDockerClient from '../coreclr/CliDockerClient';
+import { LocalFileSystemProvider } from '../coreclr/fsProvider';
 import { DefaultOutputManager } from '../coreclr/outputManager';
 import { DebugHelper, DockerDebugContext, DockerDebugScaffoldContext, inferContainerName, ResolvedDebugConfiguration, resolveDockerServerReadyAction } from '../DebugHelper';
 import { DockerDebugConfigurationBase } from '../DockerDebugConfigurationBase';
@@ -46,13 +47,15 @@ export class PythonDebugHelper implements DebugHelper {
         private readonly cliDockerClient: CliDockerClient) {
 
         const processProvider = new ChildProcessProvider();
+        const fsProvider = new LocalFileSystemProvider();
 
         this.debugpyClientFactory = () => {
             if (this.debugpyClient === undefined) {
                 this.debugpyClient = new DebugpyClient(
                     new DefaultOutputManager(ext.outputChannel),
                     ext.context.globalState,
-                    processProvider
+                    processProvider,
+                    fsProvider
                 );
             }
 
