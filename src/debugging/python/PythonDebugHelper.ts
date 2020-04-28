@@ -17,7 +17,7 @@ import { DebugHelper, DockerDebugContext, DockerDebugScaffoldContext, inferConta
 import { DockerDebugConfigurationBase } from '../DockerDebugConfigurationBase';
 import { DockerDebugConfiguration } from '../DockerDebugConfigurationProvider';
 import { PythonScaffoldingOptions } from '../DockerDebugScaffoldingProvider';
-import { DebugpyClient } from './debugpyClient';
+import { DebugpyClient } from './DebugpyClient';
 
 export interface PythonPathMapping {
     localRoot: string;
