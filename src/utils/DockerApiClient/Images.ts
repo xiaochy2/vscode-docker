@@ -8,3 +8,5 @@ import { DockerObject } from './Common';
 export interface DockerImage extends DockerObject {
     readonly repository: string
 }
+
+export type DockerImageInspection = DockerImage

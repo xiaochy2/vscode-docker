@@ -8,3 +8,5 @@ import { DockerObject } from './Common';
 export interface DockerVolume extends DockerObject {
     readonly type: string;
 }
+
+export type DockerVolumeInspection = DockerVolume

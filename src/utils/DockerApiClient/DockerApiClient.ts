@@ -3,40 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DockerInfo, DockerVersion, PruneResult } from './Common';
-import { DockerContainer } from './Containers';
-import { DockerImage } from './Images';
-import { DockerNetwork } from './Networks';
-import { DockerVolume } from './Volumes';
+import { CancellationToken } from 'vscode-languageclient';
+import { DockerInfo, PruneResult } from './Common';
+import { DockerContainer, DockerContainerInspection } from './Containers';
+import { DockerImage, DockerImageInspection } from './Images';
+import { DockerNetwork, DockerNetworkInspection } from './Networks';
+import { DockerVolume, DockerVolumeInspection } from './Volumes';
 
 export interface DockerApiClient {
-    info(): Promise<DockerInfo>;
-    version(): Promise<DockerVersion>;
+    info(token: CancellationToken): Promise<DockerInfo>;
 
-    getContainers(): Promise<DockerContainer[]>;
-    getContainer(ref: string): Promise<DockerContainer>;
-    getContainerLogs(ref: string): Promise<DockerContainer>;
-    pruneContainers(): Promise<PruneResult | undefined>;
-    startContainer(ref: string): Promise<void>;
-    restartContainer(ref: string): Promise<void>;
-    stopContainer(ref: string): Promise<void>;
-    deleteContainer(ref: string): Promise<void>;
+    getContainers(token: CancellationToken): Promise<DockerContainer[]>;
+    inspectContainer(ref: string, token: CancellationToken): Promise<DockerContainerInspection>;
+    getContainerLogs(ref: string, token: CancellationToken): Promise<DockerContainer>;
+    pruneContainers(token: CancellationToken): Promise<PruneResult | undefined>;
+    startContainer(ref: string, token: CancellationToken): Promise<void>;
+    restartContainer(ref: string, token: CancellationToken): Promise<void>;
+    stopContainer(ref: string, token: CancellationToken): Promise<void>;
+    removeContainer(ref: string, token: CancellationToken): Promise<void>;
 
-    getImages(): Promise<DockerImage[]>;
-    getImage(ref: string): Promise<DockerImage>;
-    pruneImages(): Promise<PruneResult | undefined>;
-    tagImage(ref: string, tag: string): Promise<void>;
-    deleteImage(ref: string): Promise<void>;
+    getImages(token: CancellationToken): Promise<DockerImage[]>;
+    inspectImage(ref: string, token: CancellationToken): Promise<DockerImageInspection>;
+    pruneImages(token: CancellationToken): Promise<PruneResult | undefined>;
+    tagImage(ref: string, tag: string, token: CancellationToken): Promise<void>;
+    removeImage(ref: string, token: CancellationToken): Promise<void>;
 
-    getNetworks(): Promise<DockerNetwork[]>;
-    getNetwork(ref: string): Promise<DockerNetwork>;
-    pruneNetworks(): Promise<PruneResult | undefined>;
-    createNetwork(info: DockerNetwork): Promise<void>;
-    deleteNetwork(ref: string): Promise<void>;
+    getNetworks(token: CancellationToken): Promise<DockerNetwork[]>;
+    inspectNetwork(ref: string, token: CancellationToken): Promise<DockerNetworkInspection>;
+    pruneNetworks(token: CancellationToken): Promise<PruneResult | undefined>;
+    createNetwork(info: DockerNetwork, token: CancellationToken): Promise<void>;
+    removeNetwork(ref: string, token: CancellationToken): Promise<void>;
 
-    getVolumes(): Promise<DockerVolume[]>;
-    getVolume(ref: string): Promise<DockerVolume>;
-    pruneVolumes(): Promise<PruneResult | undefined>;
-    createVolume(info: DockerVolume): Promise<void>;
-    deleteVolume(ref: string): Promise<void>;
+    getVolumes(token: CancellationToken): Promise<DockerVolume[]>;
+    inspectVolume(ref: string, token: CancellationToken): Promise<DockerVolumeInspection>;
+    pruneVolumes(token: CancellationToken): Promise<PruneResult | undefined>;
+    createVolume(info: DockerVolume, token: CancellationToken): Promise<void>;
+    removeVolume(ref: string, token: CancellationToken): Promise<void>;
 }

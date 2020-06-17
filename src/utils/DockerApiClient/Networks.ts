@@ -8,3 +8,5 @@ import { DockerObject } from './Common';
 export interface DockerNetwork extends DockerObject {
     readonly type: 'host' | 'bridge' | 'macvlan';
 }
+
+export type DockerNetworkInspection = DockerNetwork
