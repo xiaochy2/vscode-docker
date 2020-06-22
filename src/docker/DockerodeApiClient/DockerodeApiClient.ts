@@ -12,11 +12,10 @@ import { DockerContainer, DockerContainerInspection } from '../Containers';
 import { DockerContext } from '../Contexts';
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
-import { DockerNetwork, DockerNetworkInspection } from '../Networks';
+import { DockerNetwork, DockerNetworkInspection, DriverType } from '../Networks';
 import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
-import { DockerodeContainer, DockerodeNetwork } from './DockerodeObjects';
-import { getFullTagFromDigest } from './DockerodeUtils';
+import { DockerodeContainer, DockerodeContainerInspection, DockerodeImage, DockerodeImageInspection, DockerodeNetwork, DockerodeNetworkInspection } from './DockerodeObjects';
 
 export class DockerodeApiClient implements DockerApiClient {
     public constructor(private readonly dockerodeClient: Dockerode) {
@@ -27,12 +26,12 @@ export class DockerodeApiClient implements DockerApiClient {
             const result = await this.callWithErrorHandling<{ OSType: 'linux' | 'windows' }>(context, async () => this.dockerodeClient.info(), token);
 
             return {
-                OSType: result?.OSType,
+                osType: result?.OSType,
             };
         }
 
         return {
-            OSType: 'linux',
+            osType: 'linux',
         };
     }
 
@@ -87,20 +86,10 @@ export class DockerodeApiClient implements DockerApiClient {
 
         for (const image of images) {
             if (!image.RepoTags) {
-                result.push({
-                    id: image.Id,
-                    name: getFullTagFromDigest(image),
-                    repository: 'todo',
-                    createdTime: image.Created,
-                });
+                result.push(new DockerodeImage(DockerodeImage.getFullTagFromDigest(image), image));
             } else {
-                for (let fullTag of image.RepoTags) {
-                    result.push({
-                        id: image.Id,
-                        name: fullTag,
-                        repository: 'todo',
-                        createdTime: image.Created,
-                    });
+                for (const fullTag of image.RepoTags) {
+                    result.push(new DockerodeImage(fullTag, image));
                 }
             }
         }
@@ -113,7 +102,7 @@ export class DockerodeApiClient implements DockerApiClient {
         const image = this.dockerodeClient.getImage(ref);
         const result = await this.callWithErrorHandling(context, async () => image.inspect(), token);
 
-        return new DockerodeImageInspection(result);
+        return new DockerodeImageInspection(ref, result);
     }
 
     public async pruneImages(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
@@ -132,24 +121,20 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async removeImage(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
-        let image: Dockerode.Image;
+        let image: Dockerode.Image = this.dockerodeClient.getImage(ref);
 
         // Dangling images are not shown in the explorer. However, an image can end up with <none> tag, if a new version of that particular tag is pulled.
-        if (this.fullTag.endsWith(':<none>') && this._item.repoDigests && this._item.repoDigests.length > 0) {
+        if (ref.endsWith(':<none>')) {
             // Image is tagged <none>. Need to delete by digest.
-            image = await callDockerode(() => ext.dockerode.getImage(this._item.repoDigests[0]));
-        } else {
-            // Image is normal. Delete by name.
-            image = await callDockerode(() => ext.dockerode.getImage(this.fullTag));
+            const inspectInfo = await this.callWithErrorHandling(context, async () => image.inspect());
+            image = this.dockerodeClient.getImage(inspectInfo.RepoDigests[0]);
         }
 
-        await callDockerodeWithErrorHandling(async () => image.remove({ force: true }), context);
-        const image = this.dockerodeClient.getImage(ref);
-        return this.callWithErrorHandling(async () => image.remove({ force: true }), token);
+        return this.callWithErrorHandling(context, async () => image.remove({ force: true }), token);
     }
 
     public async getNetworks(context: IActionContext, token?: CancellationToken): Promise<DockerNetwork[]> {
-        const result: Dockerode.NetworkInspectInfo[] = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listNetworks(), token);
+        const result: Dockerode.NetworkInfo[] = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listNetworks(), token);
 
         return result.map(ni => new DockerodeNetwork(ni));
     }
@@ -169,7 +154,7 @@ export class DockerodeApiClient implements DockerApiClient {
         };
     }
 
-    public async createNetwork(context: IActionContext, info: DockerNetwork, token?: CancellationToken): Promise<void> {
+    public async createNetwork(context: IActionContext, options: { name: string, driver: DriverType }, token?: CancellationToken): Promise<{ id: string }> {
         throw new NotSupportedError();
     }
 

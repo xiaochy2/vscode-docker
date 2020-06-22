@@ -55,6 +55,6 @@ export class ImageTreeItem extends AzExtTreeItem {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        return ext.dockerClient.removeImage(this.imageId);
+        return ext.dockerClient.removeImage(context, this.fullTag);
     }
 }

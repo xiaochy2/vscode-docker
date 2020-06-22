@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from "vscode-azureextensionui";
 import { DockerImage } from "../../docker/Images";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
@@ -40,8 +41,8 @@ export class ImagesTreeItem extends LocalRootTreeItemBase<DockerImage, ImageProp
         return this.groupBySetting === 'None' ? 'image' : 'image group';
     }
 
-    public async getItems(): Promise<DockerImage[]> {
-        return ext.dockerClient.getImages();
+    public async getItems(context: IActionContext): Promise<DockerImage[]> {
+        return ext.dockerClient.getImages(context);
     }
 
     public getPropertyValue(item: DockerImage, property: ImageProperty): string {

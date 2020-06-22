@@ -17,10 +17,10 @@ export async function pruneSystem(context: IActionContext): Promise<void> {
     await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: localize('vscode-docker.commands.pruneSystem.pruning', 'Pruning system...') },
         async () => {
-            const containersResult = await ext.dockerClient.pruneContainers();
-            const imagesResult = await ext.dockerClient.pruneImages();
-            const networksResult = await ext.dockerClient.pruneNetworks();
-            const volumesResult = await ext.dockerClient.pruneVolumes();
+            const containersResult = await ext.dockerClient.pruneContainers(context);
+            const imagesResult = await ext.dockerClient.pruneImages(context);
+            const networksResult = await ext.dockerClient.pruneNetworks(context);
+            const volumesResult = await ext.dockerClient.pruneVolumes(context);
 
             const mbReclaimed = convertToMB(containersResult.spaceFreed + imagesResult.spaceFreed + volumesResult.spaceFreed);
             let message = localize('vscode-docker.commands.pruneSystem.removed', 'Removed {0} container(s), {1} image(s), {2} network(s), {3} volume(s) and reclaimed {4} MB of space.', containersResult.objectsRemoved, imagesResult.objectsRemoved, networksResult.objectsRemoved, volumesResult.objectsRemoved, mbReclaimed);

@@ -9,7 +9,7 @@ import { DockerInfo, PruneResult } from './Common';
 import { DockerContainer, DockerContainerInspection } from './Containers';
 import { DockerContext } from './Contexts';
 import { DockerImage, DockerImageInspection } from './Images';
-import { DockerNetwork, DockerNetworkInspection } from './Networks';
+import { DockerNetwork, DockerNetworkInspection, DriverType } from './Networks';
 import { DockerVolume, DockerVolumeInspection } from './Volumes';
 
 export interface DockerApiClient {
@@ -33,7 +33,7 @@ export interface DockerApiClient {
     getNetworks(context: IActionContext, token?: CancellationToken): Promise<DockerNetwork[]>;
     inspectNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerNetworkInspection>;
     pruneNetworks(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
-    createNetwork(context: IActionContext, info: DockerNetwork, token?: CancellationToken): Promise<void>;
+    createNetwork(context: IActionContext, options: { name: string, driver: DriverType }, token?: CancellationToken): Promise<{ id: string }>;
     removeNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
 
     getVolumes(context: IActionContext, token?: CancellationToken): Promise<DockerVolume[]>;

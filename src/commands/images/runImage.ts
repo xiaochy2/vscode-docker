@@ -26,7 +26,7 @@ async function runImageCore(context: IActionContext, node: ImageTreeItem | undef
         });
     }
 
-    const inspectInfo = await ext.dockerClient.inspectImage(node.imageId);
+    const inspectInfo = await ext.dockerClient.inspectImage(context, node.imageId);
 
     const terminalCommand = await selectRunCommand(
         context,

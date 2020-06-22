@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { workspace } from "vscode";
+import { IActionContext } from "vscode-azureextensionui";
 import { builtInNetworks, configPrefix } from "../../constants";
 import { DockerNetwork } from "../../docker/Networks";
 import { ext } from "../../extensionVariables";
@@ -41,11 +42,11 @@ export class NetworksTreeItem extends LocalRootTreeItemBase<DockerNetwork, Netwo
         return this.groupBySetting === 'None' ? 'network' : 'network group';
     }
 
-    public async getItems(): Promise<DockerNetwork[]> {
+    public async getItems(context: IActionContext): Promise<DockerNetwork[]> {
         let config = workspace.getConfiguration(configPrefix);
         let showBuiltInNetworks: boolean = config.get<boolean>('networks.showBuiltInNetworks');
 
-        let networks = await ext.dockerClient.getNetworks() || [];
+        let networks = await ext.dockerClient.getNetworks(context) || [];
 
         if (!showBuiltInNetworks) {
             networks = networks.filter(network => !builtInNetworks.includes(network.name));

@@ -46,7 +46,7 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
     public abstract childType: LocalChildType<TItem>;
     public abstract childGroupType: LocalChildGroupType<TItem, TProperty>;
 
-    public abstract getItems(): Promise<TItem[] | undefined>;
+    public abstract getItems(context: IActionContext): Promise<TItem[] | undefined>;
     public abstract getPropertyValue(item: TItem, property: TProperty): string;
 
     public static autoRefreshViews: boolean = true;
@@ -90,7 +90,7 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
                 const refreshInterval: number = this.getRefreshInterval();
                 intervalId = setInterval(
                     async () => {
-                        if (this.autoRefreshEnabled && await this.hasChanged()) {
+                        if (this.autoRefreshEnabled && await this.hasChanged(context)) {
                             // Auto refresh could be disabled while invoking the hasChanged()
                             // So check again before starting the refresh.
                             if (this.autoRefreshEnabled) {
@@ -132,7 +132,7 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             ext.activityMeasurementService.recordActivity('overallnoedit');
 
-            this._currentItems = this._itemsFromPolling || await this.getSortedItems();
+            this._currentItems = this._itemsFromPolling || await this.getSortedItems(context);
             this.clearPollingCache();
             this.failedToConnect = false;
             this._currentDockerStatus = 'Running';
@@ -340,21 +340,21 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
         return result;
     }
 
-    private async getSortedItems(): Promise<TItem[]> {
+    private async getSortedItems(context: IActionContext): Promise<TItem[]> {
         if (ext.dockerodeInitError === undefined) {
-            const items: TItem[] = await this.getItems() || [];
+            const items: TItem[] = await this.getItems(context) || [];
             return items.sort((a, b) => a.treeId.localeCompare(b.treeId));
         } else {
             throw ext.dockerodeInitError;
         }
     }
 
-    private async hasChanged(): Promise<boolean> {
+    private async hasChanged(context: IActionContext): Promise<boolean> {
         let pollingDockerStatus: DockerStatus;
         let isDockerStatusChanged = false;
 
         try {
-            this._itemsFromPolling = await this.getSortedItems();
+            this._itemsFromPolling = await this.getSortedItems(context);
             pollingDockerStatus = 'Running';
         } catch (error) {
             this.clearPollingCache();

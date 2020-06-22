@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem } from "vscode-azureextensionui";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
 import { DockerContainer, NonComposeGroupName } from "../../docker/Containers";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
@@ -51,8 +51,8 @@ export class ContainersTreeItem extends LocalRootTreeItemBase<DockerContainer, C
         return this.groupBySetting === 'None' ? 'container' : 'container group';
     }
 
-    public async getItems(): Promise<DockerContainer[]> {
-        const results = await ext.dockerClient.getContainers();
+    public async getItems(context: IActionContext): Promise<DockerContainer[]> {
+        const results = await ext.dockerClient.getContainers(context);
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.updateNewContainerUser(results);
         return results;

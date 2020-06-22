@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from "vscode-azureextensionui";
 import { DockerVolume } from "../../docker/Volumes";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
@@ -39,8 +40,8 @@ export class VolumesTreeItem extends LocalRootTreeItemBase<DockerVolume, VolumeP
         return this.groupBySetting === 'None' ? 'volume' : 'volume group';
     }
 
-    public async getItems(): Promise<DockerVolume[]> {
-        return ext.dockerClient.getVolumes();
+    public async getItems(context: IActionContext): Promise<DockerVolume[]> {
+        return ext.dockerClient.getVolumes(context);
     }
 
     public getPropertyValue(item: DockerVolume, property: VolumeProperty): string {

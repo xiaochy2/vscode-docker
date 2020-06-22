@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { workspace, WorkspaceConfiguration } from 'vscode';
-import { AzExtTreeItem } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { DockerContext } from '../../docker/Contexts';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -42,8 +42,8 @@ export class ContextsTreeItem extends LocalRootTreeItemBase<DockerContext, Conte
         return this.groupBySetting === 'None' ? 'context' : 'context group';
     }
 
-    public async getItems(): Promise<DockerContext[]> {
-        return ext.dockerClient.getContexts();
+    public async getItems(context: IActionContext): Promise<DockerContext[]> {
+        return ext.dockerClient.getContexts(context);
     }
 
     public getPropertyValue(item: DockerContext, property: ContextProperty): string {
