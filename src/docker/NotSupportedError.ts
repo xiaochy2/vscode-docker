@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export class NotImplementedError extends Error {
+export class NotSupportedError extends Error {
     public constructor() {
-        super('Not implemented');
+        super('Not supported');
     }
 }

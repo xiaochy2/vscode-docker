@@ -11,7 +11,7 @@ import { ContainerStatus, DockerContainer, DockerContainerInspection } from '../
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
 import { DockerNetwork, DockerNetworkInspection } from '../Networks';
-import { NotImplementedError } from '../NotImplementedError';
+import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
 
 export class DockerodeApiClient implements DockerApiClient {
@@ -58,7 +58,7 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async getContainerLogs(ref: string, token: CancellationToken): Promise<DockerContainer> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async pruneContainers(token: CancellationToken): Promise<PruneResult> {
@@ -135,11 +135,11 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async getNetworks(token: CancellationToken): Promise<DockerNetwork[]> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async inspectNetwork(ref: string, token: CancellationToken): Promise<DockerNetworkInspection> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async pruneNetworks(token: CancellationToken): Promise<PruneResult> {
@@ -151,7 +151,7 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async createNetwork(info: DockerNetwork, token: CancellationToken): Promise<void> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async removeNetwork(ref: string, token: CancellationToken): Promise<void> {
@@ -160,11 +160,11 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async getVolumes(token: CancellationToken): Promise<DockerVolume[]> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async inspectVolume(ref: string, token: CancellationToken): Promise<DockerVolumeInspection> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async pruneVolumes(token: CancellationToken): Promise<PruneResult> {
@@ -176,7 +176,7 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async createVolume(info: DockerVolume, token: CancellationToken): Promise<void> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 
     public async removeVolume(ref: string, token: CancellationToken): Promise<void> {
@@ -185,6 +185,6 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     private async callWithErrorHandling<T>(callback: () => Promise<T>, token: CancellationToken): Promise<T> {
-        throw new NotImplementedError();
+        throw new NotSupportedError();
     }
 }
