@@ -7,6 +7,7 @@ import { ConfigurationChangeEvent, ConfigurationTarget, TreeView, TreeViewVisibi
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, GenericTreeItem, IActionContext, IParsedError, parseError, registerEvent } from "vscode-azureextensionui";
 import { showDockerInstallNotification } from "../commands/dockerInstaller";
 import { configPrefix } from "../constants";
+import { DockerObject } from "../docker/Common";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 import { dockerInstallStatusProvider } from "../utils/DockerInstallStatusProvider";
@@ -22,14 +23,8 @@ import { TreeSettingStep } from "./settings/TreeSettingStep";
 
 type DockerStatus = 'NotInstalled' | 'Installed' | 'Running';
 
-export interface ILocalItem {
-    createdTime: number;
-    treeId: string;
-    data: unknown;
-}
-
-export type LocalChildType<T extends ILocalItem> = new (parent: AzExtParentTreeItem, item: T) => AzExtTreeItem & { createdTime: number; };
-export type LocalChildGroupType<TItem extends ILocalItem, TProperty extends string | CommonProperty> = new (parent: LocalRootTreeItemBase<TItem, TProperty>, group: string, items: TItem[]) => LocalGroupTreeItemBase<TItem, TProperty>;
+export type LocalChildType<T extends DockerObject> = new (parent: AzExtParentTreeItem, item: T) => AzExtTreeItem & { createdTime: number; };
+export type LocalChildGroupType<TItem extends DockerObject, TProperty extends string | CommonProperty> = new (parent: LocalRootTreeItemBase<TItem, TProperty>, group: string, items: TItem[]) => LocalGroupTreeItemBase<TItem, TProperty>;
 
 const groupByKey: string = 'groupBy';
 const sortByKey: string = 'sortBy';
@@ -37,7 +32,7 @@ export const labelKey: string = 'label';
 export const descriptionKey: string = 'description';
 let dockerInstallNotificationShownToUser: boolean = false;
 
-export abstract class LocalRootTreeItemBase<TItem extends ILocalItem, TProperty extends string | CommonProperty> extends AzExtParentTreeItem {
+export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TProperty extends string | CommonProperty> extends AzExtParentTreeItem {
     public abstract labelSettingInfo: ITreeSettingInfo<TProperty>;
     public abstract descriptionSettingInfo: ITreeArraySettingInfo<TProperty>;
     public abstract groupBySettingInfo: ITreeSettingInfo<TProperty | CommonGroupBy>;

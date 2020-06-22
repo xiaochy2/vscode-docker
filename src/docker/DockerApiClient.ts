@@ -3,40 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
 import { DockerInfo, PruneResult } from './Common';
 import { DockerContainer, DockerContainerInspection } from './Containers';
+import { DockerContext } from './Contexts';
 import { DockerImage, DockerImageInspection } from './Images';
 import { DockerNetwork, DockerNetworkInspection } from './Networks';
 import { DockerVolume, DockerVolumeInspection } from './Volumes';
 
 export interface DockerApiClient {
-    info(token: CancellationToken): Promise<DockerInfo>;
+    info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo>;
 
-    getContainers(token: CancellationToken): Promise<DockerContainer[]>;
-    inspectContainer(ref: string, token: CancellationToken): Promise<DockerContainerInspection>;
-    getContainerLogs(ref: string, token: CancellationToken): Promise<DockerContainer>;
-    pruneContainers(token: CancellationToken): Promise<PruneResult | undefined>;
-    startContainer(ref: string, token: CancellationToken): Promise<void>;
-    restartContainer(ref: string, token: CancellationToken): Promise<void>;
-    stopContainer(ref: string, token: CancellationToken): Promise<void>;
-    removeContainer(ref: string, token: CancellationToken): Promise<void>;
+    getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]>;
+    inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection>;
+    getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainer>;
+    pruneContainers(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
+    startContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
+    restartContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
+    stopContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
+    removeContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
 
-    getImages(token: CancellationToken): Promise<DockerImage[]>;
-    inspectImage(ref: string, token: CancellationToken): Promise<DockerImageInspection>;
-    pruneImages(token: CancellationToken): Promise<PruneResult | undefined>;
-    tagImage(ref: string, tag: string, token: CancellationToken): Promise<void>;
-    removeImage(ref: string, token: CancellationToken): Promise<void>;
+    getImages(context: IActionContext, token?: CancellationToken): Promise<DockerImage[]>;
+    inspectImage(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerImageInspection>;
+    pruneImages(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
+    tagImage(context: IActionContext, ref: string, tag: string, token?: CancellationToken): Promise<void>;
+    removeImage(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
 
-    getNetworks(token: CancellationToken): Promise<DockerNetwork[]>;
-    inspectNetwork(ref: string, token: CancellationToken): Promise<DockerNetworkInspection>;
-    pruneNetworks(token: CancellationToken): Promise<PruneResult | undefined>;
-    createNetwork(info: DockerNetwork, token: CancellationToken): Promise<void>;
-    removeNetwork(ref: string, token: CancellationToken): Promise<void>;
+    getNetworks(context: IActionContext, token?: CancellationToken): Promise<DockerNetwork[]>;
+    inspectNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerNetworkInspection>;
+    pruneNetworks(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
+    createNetwork(context: IActionContext, info: DockerNetwork, token?: CancellationToken): Promise<void>;
+    removeNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
 
-    getVolumes(token: CancellationToken): Promise<DockerVolume[]>;
-    inspectVolume(ref: string, token: CancellationToken): Promise<DockerVolumeInspection>;
-    pruneVolumes(token: CancellationToken): Promise<PruneResult | undefined>;
-    createVolume(info: DockerVolume, token: CancellationToken): Promise<void>;
-    removeVolume(ref: string, token: CancellationToken): Promise<void>;
+    getVolumes(context: IActionContext, token?: CancellationToken): Promise<DockerVolume[]>;
+    inspectVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerVolumeInspection>;
+    pruneVolumes(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
+    createVolume(context: IActionContext, info: DockerVolume, token?: CancellationToken): Promise<void>;
+    removeVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
+
+    getContexts(context: IActionContext, token?: CancellationToken): Promise<DockerContext[]>;
 }

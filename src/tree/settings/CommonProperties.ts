@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as moment from 'moment';
+import { DockerObject } from '../../docker/Common';
 import { localize } from '../../localize';
 import { getThemedIconPath, IconPath } from '../IconPath';
-import { ILocalItem } from '../LocalRootTreeItemBase';
 import { ITreePropertyInfo } from './ITreeSettingInfo';
 
 export type CommonProperty = 'CreatedTime';
@@ -27,7 +27,7 @@ export const sortByProperties: ITreePropertyInfo<CommonSortBy>[] = [
     { property: 'Label', description: localize('vscode-docker.tree.settings.label', 'Sort alphabetically by label') }
 ];
 
-export function getCommonPropertyValue(item: ILocalItem, property: CommonProperty): string {
+export function getCommonPropertyValue(item: DockerObject, property: CommonProperty): string {
     switch (property) {
         case 'CreatedTime':
             return moment(new Date(item.createdTime)).fromNow();

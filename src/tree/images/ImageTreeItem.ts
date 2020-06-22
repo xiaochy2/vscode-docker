@@ -3,19 +3,17 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Image } from 'dockerode';
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
+import { DockerImage } from '../../docker/Images';
 import { ext } from '../../extensionVariables';
-import { callDockerode, callDockerodeWithErrorHandling } from '../../utils/callDockerode';
 import { getThemedIconPath, IconPath } from '../IconPath';
-import { ILocalImageInfo } from './LocalImageInfo';
 
 export class ImageTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'image';
     public contextValue: string = ImageTreeItem.contextValue;
-    private readonly _item: ILocalImageInfo;
+    private readonly _item: DockerImage;
 
-    public constructor(parent: AzExtParentTreeItem, itemInfo: ILocalImageInfo) {
+    public constructor(parent: AzExtParentTreeItem, itemInfo: DockerImage) {
         super(parent);
         this._item = itemInfo;
     }
@@ -29,11 +27,11 @@ export class ImageTreeItem extends AzExtTreeItem {
     }
 
     public get imageId(): string {
-        return this._item.imageId;
+        return this._item.id;
     }
 
     public get fullTag(): string {
-        return this._item.fullTag;
+        return this._item.name;
     }
 
     public get label(): string {
@@ -56,22 +54,7 @@ export class ImageTreeItem extends AzExtTreeItem {
         return getThemedIconPath(icon);
     }
 
-    public async getImage(): Promise<Image> {
-        return callDockerode(() => ext.dockerode.getImage(this.imageId));
-    }
-
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        let image: Image;
-
-        // Dangling images are not shown in the explorer. However, an image can end up with <none> tag, if a new version of that particular tag is pulled.
-        if (this.fullTag.endsWith(':<none>') && this._item.repoDigests && this._item.repoDigests.length > 0) {
-            // Image is tagged <none>. Need to delete by digest.
-            image = await callDockerode(() => ext.dockerode.getImage(this._item.repoDigests[0]));
-        } else {
-            // Image is normal. Delete by name.
-            image = await callDockerode(() => ext.dockerode.getImage(this.fullTag));
-        }
-
-        await callDockerodeWithErrorHandling(async () => image.remove({ force: true }), context);
+        return ext.dockerClient.removeImage(this.imageId);
     }
 }

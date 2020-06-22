@@ -3,13 +3,11 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Container } from 'dockerode';
-import vscode = require('vscode');
+import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ContainerTreeItem } from '../../tree/containers/ContainerTreeItem';
-import { callDockerodeWithErrorHandling } from '../../utils/callDockerode';
 import { multiSelectNodes } from '../../utils/multiSelectNodes';
 
 export async function startContainer(context: IActionContext, node?: ContainerTreeItem, nodes?: ContainerTreeItem[]): Promise<void> {
@@ -23,8 +21,7 @@ export async function startContainer(context: IActionContext, node?: ContainerTr
 
     await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('vscode-docker.commands.containers.start.starting', 'Starting Container(s)...') }, async () => {
         await Promise.all(nodes.map(async n => {
-            const container: Container = await n.getContainer();
-            await callDockerodeWithErrorHandling(async () => container.start(), context);
+            await ext.dockerClient.startContainer(context, node.containerId);
         }));
     });
 }

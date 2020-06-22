@@ -4,17 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
+import { DockerContext } from "../../docker/Contexts";
 import { ext } from "../../extensionVariables";
 import { dockerContextManager } from "../../utils/dockerContextManager";
 import { getThemedIconPath, IconPath } from '../IconPath';
-import { LocalContextInfo } from "./LocalContextInfo";
 
 export class ContextTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'context';
     public contextValue: string = ContextTreeItem.contextValue;
-    private readonly _item: LocalContextInfo;
+    private readonly _item: DockerContext;
 
-    public constructor(parent: AzExtParentTreeItem, item: LocalContextInfo) {
+    public constructor(parent: AzExtParentTreeItem, item: DockerContext) {
         super(parent);
         this._item = item;
     }
@@ -38,15 +38,15 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public get name(): string {
-        return this._item.data.Name;
+        return this._item.name;
     }
 
     public get current(): boolean {
-        return this._item.data.Current;
+        return this._item.current;
     }
 
     public get iconPath(): IconPath {
-        if (this._item.data.Current) {
+        if (this._item.current) {
             return getThemedIconPath('connect');
         }
     }

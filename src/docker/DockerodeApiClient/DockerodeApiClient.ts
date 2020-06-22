@@ -5,22 +5,26 @@
 
 import Dockerode = require('dockerode');
 import * as os from 'os';
+import { IActionContext } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
 import { DockerInfo, PruneResult } from '../Common';
-import { ContainerStatus, DockerContainer, DockerContainerInspection } from '../Containers';
+import { DockerContainer, DockerContainerInspection } from '../Containers';
+import { DockerContext } from '../Contexts';
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
 import { DockerNetwork, DockerNetworkInspection } from '../Networks';
 import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
+import { DockerodeContainer, DockerodeNetwork } from './DockerodeObjects';
+import { getFullTagFromDigest } from './DockerodeUtils';
 
 export class DockerodeApiClient implements DockerApiClient {
     public constructor(private readonly dockerodeClient: Dockerode) {
     }
 
-    public async info(token: CancellationToken): Promise<DockerInfo> {
+    public async info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo> {
         if (os.platform() === 'win32') {
-            const result = await this.callWithErrorHandling<{ OSType: 'linux' | 'windows' }>(async () => this.dockerodeClient.info(), token);
+            const result = await this.callWithErrorHandling<{ OSType: 'linux' | 'windows' }>(context, async () => this.dockerodeClient.info(), token);
 
             return {
                 OSType: result?.OSType,
@@ -32,159 +36,178 @@ export class DockerodeApiClient implements DockerApiClient {
         };
     }
 
-    public async getContainers(token: CancellationToken): Promise<DockerContainer[]> {
-        const result = await this.callWithErrorHandling(async () => this.dockerodeClient.listContainers({ all: true }), token);
+    public async getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]> {
+        const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listContainers({ all: true }), token);
 
-        return result.map(ci => {
-            return {
-                id: ci.Id,
-                name: ci.Names[0],
-                status: ci.Status as ContainerStatus,
-                createdTime: ci.Created,
-            };
-        });
+        return result.map(ci => new DockerodeContainer(ci));
     }
 
-    public async inspectContainer(ref: string, token: CancellationToken): Promise<DockerContainerInspection> {
+    public async inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection> {
         const container = this.dockerodeClient.getContainer(ref);
-        const result = await this.callWithErrorHandling(async () => container.inspect(), token);
+        const result = await this.callWithErrorHandling(context, async () => container.inspect(), token);
 
-        return {
-            id: result.Id,
-            name: result.Name,
-            status: result.State.Status as ContainerStatus,
-            createdTime: Number(result.Created),
-        };
+        return new DockerodeContainerInspection(result);
     }
 
-    public async getContainerLogs(ref: string, token: CancellationToken): Promise<DockerContainer> {
+    public async getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainer> {
         throw new NotSupportedError();
     }
 
-    public async pruneContainers(token: CancellationToken): Promise<PruneResult> {
-        const result = await this.callWithErrorHandling(async () => this.dockerodeClient.pruneContainers(), token);
+    public async pruneContainers(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
+        const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneContainers(), token);
         return {
             objectsRemoved: result.ContainersDeleted.length,
             spaceFreed: result.SpaceReclaimed,
         };
     }
 
-    public async startContainer(ref: string, token: CancellationToken): Promise<void> {
+    public async startContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const container = this.dockerodeClient.getContainer(ref);
-        return this.callWithErrorHandling(async () => container.start(), token);
+        return this.callWithErrorHandling(context, async () => container.start(), token);
     }
 
-    public async restartContainer(ref: string, token: CancellationToken): Promise<void> {
+    public async restartContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const container = this.dockerodeClient.getContainer(ref);
-        return this.callWithErrorHandling(async () => container.restart(), token);
+        return this.callWithErrorHandling(context, async () => container.restart(), token);
     }
 
-    public async stopContainer(ref: string, token: CancellationToken): Promise<void> {
+    public async stopContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const container = this.dockerodeClient.getContainer(ref);
-        return this.callWithErrorHandling(async () => container.stop(), token);
+        return this.callWithErrorHandling(context, async () => container.stop(), token);
     }
 
-    public async removeContainer(ref: string, token: CancellationToken): Promise<void> {
+    public async removeContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const container = this.dockerodeClient.getContainer(ref);
-        return this.callWithErrorHandling(async () => container.remove({ force: true }), token);
+        return this.callWithErrorHandling(context, async () => container.remove({ force: true }), token);
     }
 
-    public async getImages(token: CancellationToken): Promise<DockerImage[]> {
-        const result = await this.callWithErrorHandling(async () => this.dockerodeClient.listImages({ all: true }), token);
+    public async getImages(context: IActionContext, token?: CancellationToken): Promise<DockerImage[]> {
+        const images = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listImages({ filters: { dangling: false } }), token);
+        const result: DockerImage[] = [];
 
-        return result.map(ii => {
-            return {
-                id: ii.Id,
-                name: ii.RepoTags[0], // todo
-                repository: 'todo',
-                createdTime: ii.Created,
-            };
-        });
+        for (const image of images) {
+            if (!image.RepoTags) {
+                result.push({
+                    id: image.Id,
+                    name: getFullTagFromDigest(image),
+                    repository: 'todo',
+                    createdTime: image.Created,
+                });
+            } else {
+                for (let fullTag of image.RepoTags) {
+                    result.push({
+                        id: image.Id,
+                        name: fullTag,
+                        repository: 'todo',
+                        createdTime: image.Created,
+                    });
+                }
+            }
+        }
+
+        return result;
+
     }
 
-    public async inspectImage(ref: string, token: CancellationToken): Promise<DockerImageInspection> {
+    public async inspectImage(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerImageInspection> {
         const image = this.dockerodeClient.getImage(ref);
-        const result = await this.callWithErrorHandling(async () => image.inspect(), token);
+        const result = await this.callWithErrorHandling(context, async () => image.inspect(), token);
 
-        return {
-            id: result.Id,
-            name: result.RepoTags[0], // todo
-            repository: 'todo',
-            createdTime: Number(result.Created),
-        };
+        return new DockerodeImageInspection(result);
     }
 
-    public async pruneImages(token: CancellationToken): Promise<PruneResult> {
-        const result = await this.callWithErrorHandling(async () => this.dockerodeClient.pruneImages(), token);
+    public async pruneImages(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
+        const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneImages(), token);
         return {
             objectsRemoved: result.ImagesDeleted.length,
             spaceFreed: result.SpaceReclaimed,
         };
     }
 
-    public async tagImage(ref: string, fullTag: string, token: CancellationToken): Promise<void> {
+    public async tagImage(context: IActionContext, ref: string, fullTag: string, token?: CancellationToken): Promise<void> {
         const repo = fullTag.substr(0, fullTag.lastIndexOf(':'));
         const tag = fullTag.substr(fullTag.lastIndexOf(':'));
         const image = this.dockerodeClient.getImage(ref);
-        await this.callWithErrorHandling(async () => image.tag({ repo: repo, tag: tag }), token);
+        await this.callWithErrorHandling(context, async () => image.tag({ repo: repo, tag: tag }), token);
     }
 
-    public async removeImage(ref: string, token: CancellationToken): Promise<void> {
+    public async removeImage(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
+        let image: Dockerode.Image;
+
+        // Dangling images are not shown in the explorer. However, an image can end up with <none> tag, if a new version of that particular tag is pulled.
+        if (this.fullTag.endsWith(':<none>') && this._item.repoDigests && this._item.repoDigests.length > 0) {
+            // Image is tagged <none>. Need to delete by digest.
+            image = await callDockerode(() => ext.dockerode.getImage(this._item.repoDigests[0]));
+        } else {
+            // Image is normal. Delete by name.
+            image = await callDockerode(() => ext.dockerode.getImage(this.fullTag));
+        }
+
+        await callDockerodeWithErrorHandling(async () => image.remove({ force: true }), context);
         const image = this.dockerodeClient.getImage(ref);
         return this.callWithErrorHandling(async () => image.remove({ force: true }), token);
     }
 
-    public async getNetworks(token: CancellationToken): Promise<DockerNetwork[]> {
-        throw new NotSupportedError();
+    public async getNetworks(context: IActionContext, token?: CancellationToken): Promise<DockerNetwork[]> {
+        const result: Dockerode.NetworkInspectInfo[] = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listNetworks(), token);
+
+        return result.map(ni => new DockerodeNetwork(ni));
     }
 
-    public async inspectNetwork(ref: string, token: CancellationToken): Promise<DockerNetworkInspection> {
-        throw new NotSupportedError();
+    public async inspectNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerNetworkInspection> {
+        const network = this.dockerodeClient.getNetwork(ref);
+        const result = await this.callWithErrorHandling(context, async () => network.inspect(), token);
+
+        return new DockerodeNetworkInspection(result);
     }
 
-    public async pruneNetworks(token: CancellationToken): Promise<PruneResult> {
-        const result = await this.callWithErrorHandling(async () => this.dockerodeClient.pruneNetworks(), token);
+    public async pruneNetworks(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
+        const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneNetworks(), token);
         return {
             objectsRemoved: result.NetworksDeleted.length,
             spaceFreed: 0,
         };
     }
 
-    public async createNetwork(info: DockerNetwork, token: CancellationToken): Promise<void> {
+    public async createNetwork(context: IActionContext, info: DockerNetwork, token?: CancellationToken): Promise<void> {
         throw new NotSupportedError();
     }
 
-    public async removeNetwork(ref: string, token: CancellationToken): Promise<void> {
+    public async removeNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const network = this.dockerodeClient.getNetwork(ref);
-        return this.callWithErrorHandling(async () => network.remove({ force: true }), token);
+        return this.callWithErrorHandling(context, async () => network.remove({ force: true }), token);
     }
 
-    public async getVolumes(token: CancellationToken): Promise<DockerVolume[]> {
+    public async getVolumes(context: IActionContext, token?: CancellationToken): Promise<DockerVolume[]> {
         throw new NotSupportedError();
     }
 
-    public async inspectVolume(ref: string, token: CancellationToken): Promise<DockerVolumeInspection> {
+    public async inspectVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerVolumeInspection> {
         throw new NotSupportedError();
     }
 
-    public async pruneVolumes(token: CancellationToken): Promise<PruneResult> {
-        const result = await this.callWithErrorHandling(async () => this.dockerodeClient.pruneVolumes(), token);
+    public async pruneVolumes(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
+        const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneVolumes(), token);
         return {
             objectsRemoved: result.VolumesDeleted.length,
             spaceFreed: result.SpaceReclaimed,
         };
     }
 
-    public async createVolume(info: DockerVolume, token: CancellationToken): Promise<void> {
+    public async createVolume(context: IActionContext, info: DockerVolume, token?: CancellationToken): Promise<void> {
         throw new NotSupportedError();
     }
 
-    public async removeVolume(ref: string, token: CancellationToken): Promise<void> {
+    public async removeVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const volume = this.dockerodeClient.getVolume(ref);
-        return this.callWithErrorHandling(async () => volume.remove({ force: true }), token);
+        return this.callWithErrorHandling(context, async () => volume.remove({ force: true }), token);
     }
 
-    private async callWithErrorHandling<T>(callback: () => Promise<T>, token: CancellationToken): Promise<T> {
+    public async getContexts(context: IActionContext, token?: CancellationToken): Promise<DockerContext[]> {
+        throw new NotSupportedError();
+    }
+
+    private async callWithErrorHandling<T>(context: IActionContext, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {
         throw new NotSupportedError();
     }
 }

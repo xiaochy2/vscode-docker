@@ -3,20 +3,18 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Container } from "dockerode";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
+import { DockerContainer } from "../../docker/Containers";
 import { ext } from "../../extensionVariables";
-import { callDockerode, callDockerodeWithErrorHandling } from "../../utils/callDockerode";
 import { getThemedIconPath, IconPath } from '../IconPath';
 import { getContainerStateIcon } from "./ContainerProperties";
-import { ILocalContainerInfo } from "./LocalContainerInfo";
 
 export class ContainerTreeItem extends AzExtTreeItem {
     public static allContextRegExp: RegExp = /Container$/;
     public static runningContainerRegExp: RegExp = /^runningContainer$/i;
-    private readonly _item: ILocalContainerInfo;
+    private readonly _item: DockerContainer;
 
-    public constructor(parent: AzExtParentTreeItem, itemInfo: ILocalContainerInfo) {
+    public constructor(parent: AzExtParentTreeItem, itemInfo: DockerContainer) {
         super(parent);
         this._item = itemInfo;
     }
@@ -30,15 +28,15 @@ export class ContainerTreeItem extends AzExtTreeItem {
     }
 
     public get containerId(): string {
-        return this._item.containerId;
+        return this._item.id;
     }
 
     public get containerName(): string {
-        return this._item.containerName;
+        return this._item.name;
     }
 
     public get fullTag(): string {
-        return this._item.fullTag;
+        return this._item.image.name;
     }
 
     public get label(): string {
@@ -58,8 +56,10 @@ export class ContainerTreeItem extends AzExtTreeItem {
      * They add a context menu item "Attach Visual Studio Code" to our container nodes that relies on containerDesc
      * https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers
      */
-    public get containerDesc(): unknown {
-        return this._item.data;
+    public get containerDesc(): { Id: string } {
+        return {
+            Id: this._item.id,
+        };
     }
 
     public get iconPath(): IconPath {
@@ -70,12 +70,7 @@ export class ContainerTreeItem extends AzExtTreeItem {
         }
     }
 
-    public async getContainer(): Promise<Container> {
-        return callDockerode(() => ext.dockerode.getContainer(this.containerId));
-    }
-
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        const container: Container = await this.getContainer();
-        await callDockerodeWithErrorHandling(async () => container.remove({ force: true }), context);
+        return ext.dockerClient.removeContainer(context, this.containerId);
     }
 }

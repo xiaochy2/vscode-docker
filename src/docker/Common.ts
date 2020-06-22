@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+export type DockerOSType = 'linux' | 'windows';
+
 export interface DockerInfo {
-    readonly OSType: 'linux' | 'windows';
+    readonly osType: DockerOSType;
 }
 
 export interface PruneResult {
@@ -16,4 +18,7 @@ export interface DockerObject {
     readonly id: string;
     readonly name: string;
     readonly createdTime: number;
+
+    // For the tree view
+    readonly treeId: string;
 }

@@ -5,10 +5,8 @@
 
 import { DockerObject } from './Common';
 
-export type DriverType = 'host' | 'bridge' | 'macvlan';
-
-export interface DockerNetwork extends DockerObject {
-    readonly driver: DriverType;
+export interface DockerContext extends DockerObject {
+    readonly description?: string;
+    readonly dockerEndpoint?: string;
+    readonly current: boolean;
 }
-
-export type DockerNetworkInspection = DockerNetwork
