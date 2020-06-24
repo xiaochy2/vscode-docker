@@ -5,6 +5,7 @@
 
 import { DockerObject } from './Common';
 
+// TODO: better
 export interface DockerContext extends DockerObject {
     readonly description?: string;
     readonly dockerEndpoint?: string;
@@ -12,6 +13,5 @@ export interface DockerContext extends DockerObject {
 }
 
 export interface DockerContextInspection extends DockerObject {
-    readonly foo: string;
-    // readonly [key: string]: unknown;
+    readonly [key: string]: unknown;
 }

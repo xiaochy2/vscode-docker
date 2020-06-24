@@ -12,6 +12,5 @@ export interface DockerNetwork extends DockerObject {
 }
 
 export interface DockerNetworkInspection extends DockerObject {
-    readonly foo: string;
-    // readonly [key: string]: unknown;
+    readonly Driver: DriverType;
 }

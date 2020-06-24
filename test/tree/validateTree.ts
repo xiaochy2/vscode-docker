@@ -6,6 +6,7 @@
 import * as assert from 'assert';
 import { DockerodeApiClient, AzExtParentTreeItem, AzExtTreeItem, ext, IActionContext } from '../../extension.bundle';
 import { runWithSetting } from '../runWithSetting';
+import { EventEmitter } from 'vscode';
 
 export function generateCreatedTimeInSec(days: number): number {
     const daysInSec = days * 24 * 60 * 60;
@@ -72,12 +73,20 @@ async function runWithMockerode(options: ITestMockerodeOptions, callback: () => 
     const oldClient = ext.dockerClient;
 
     try {
-        ext.dockerClient = new DockerodeApiClient(<any>{
+        const mockerode = {
             listContainers: async () => options.containers,
             listImages: async () => options.images,
             listVolumes: async () => { return { Volumes: options.volumes } },
             listNetworks: async () => options.networks
-        });
+        };
+
+        const mockContextManager = {
+            refresh: async () => Promise.resolve(),
+            onContextChanged: new EventEmitter<void>().event,
+            dispose: () => { },
+        };
+
+        ext.dockerClient = new DockerodeApiClient(async () => Promise.resolve(<any>mockerode), mockContextManager);
         await callback();
     } finally {
         ext.dockerClient = oldClient;

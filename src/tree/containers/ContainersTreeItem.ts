@@ -5,7 +5,6 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
 import { DockerContainer, NonComposeGroupName } from "../../docker/Containers";
-import { DockerImage } from "../../docker/Images";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { getThemedIconPath } from "../IconPath";
@@ -79,7 +78,7 @@ export class ContainersTreeItem extends LocalRootTreeItemBase<DockerContainer, C
             case 'Compose Project Name':
                 return item.composeProjectName;
             default:
-                return getImagePropertyValue(item as DockerImage, property);
+                return getImagePropertyValue({ ...item, Name: item.Image }, property);
         }
     }
 

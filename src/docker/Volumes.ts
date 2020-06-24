@@ -12,5 +12,5 @@ export interface DockerVolume extends DockerObject {
 }
 
 export interface DockerVolumeInspection extends DockerObject {
-    readonly foo?: string;
+    readonly Driver: VolumeDriverType;
 }

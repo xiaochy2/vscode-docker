@@ -82,7 +82,6 @@ export async function getDockerOSType(context: IActionContext): Promise<DockerOS
         return 'linux';
     } else {
         const info = await ext.dockerClient.info(context);
-        // eslint-disable-next-line @typescript-eslint/tslint/config
         return info.OSType;
     }
 }

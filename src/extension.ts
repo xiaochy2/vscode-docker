@@ -15,6 +15,9 @@ import { LegacyDockerDebugConfigProvider } from './configureWorkspace/LegacyDock
 import { COMPOSE_FILE_GLOB_PATTERN } from './constants';
 import { registerDebugConfigurationProvider } from './debugging/coreclr/registerDebugConfigurationProvider';
 import { registerDebugProvider } from './debugging/DebugHelper';
+import { contextManager } from './docker/ContextManager';
+import { DockerodeApiClient } from './docker/DockerodeApiClient/DockerodeApiClient';
+import { refreshDockerode } from './docker/DockerodeApiClient/refreshDockerode';
 import { DockerComposeCompletionItemProvider } from './dockerCompose/dockerComposeCompletionItemProvider';
 import { DockerComposeHoverProvider } from './dockerCompose/dockerComposeHoverProvider';
 import composeVersionKeys from './dockerCompose/dockerComposeKeyInfo';
@@ -31,7 +34,6 @@ import { SurveyManager } from './telemetry/surveys/SurveyManager';
 import { registerTrees } from './tree/registerTrees';
 import { AzureAccountExtensionListener } from './utils/AzureAccountExtensionListener';
 import { Keytar } from './utils/keytar';
-import { refreshDockerode } from './utils/refreshDockerode';
 import { bufferToString } from './utils/spawnAsync';
 import { DefaultTerminalProvider } from './utils/TerminalProvider';
 
@@ -120,7 +122,10 @@ export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: 
             )
         );
 
-        await refreshDockerode();
+        // TODO: smartly multiplex depending on context
+        const dockerClient = new DockerodeApiClient(async () => refreshDockerode(), contextManager);
+        ctx.subscriptions.push(dockerClient);
+        ext.dockerClient = dockerClient;
 
         registerTrees();
         registerCommands();
@@ -228,7 +233,7 @@ namespace Configuration {
                     e.affectsConfiguration('docker.tlsVerify') ||
                     e.affectsConfiguration('docker.machineName') ||
                     e.affectsConfiguration('docker.dockerodeOptions')) {
-                    await refreshDockerode();
+                    await contextManager.refresh();
                 }
             }
         ));

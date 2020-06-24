@@ -7,7 +7,6 @@ export type DockerOSType = 'linux' | 'windows';
 
 export interface DockerInfo {
     readonly OSType: DockerOSType;
-    // readonly [key: string]: unknown;
 }
 
 export interface PruneResult {

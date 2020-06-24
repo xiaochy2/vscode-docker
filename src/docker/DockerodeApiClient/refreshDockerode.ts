@@ -9,15 +9,14 @@ import * as os from 'os';
 import * as url from 'url';
 import { CancellationTokenSource, workspace } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { DockerodeApiClient } from '../docker/DockerodeApiClient/DockerodeApiClient';
-import { ext } from '../extensionVariables';
-import { localize } from '../localize';
-import { addDockerSettingsToEnv } from './addDockerSettingsToEnv';
-import { cloneObject } from './cloneObject';
-import { dockerContextManager, IDockerContext } from './dockerContextManager';
-import { isWindows } from './osUtils';
-import { delay } from './promiseUtils';
-import { timeUtils } from './timeUtils';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../localize';
+import { addDockerSettingsToEnv } from '../../utils/addDockerSettingsToEnv';
+import { cloneObject } from '../../utils/cloneObject';
+import { dockerContextManager, IDockerContext } from '../../utils/dockerContextManager';
+import { isWindows } from '../../utils/osUtils';
+import { TimeoutPromiseSource } from '../../utils/promiseUtils';
+import { timeUtils } from '../../utils/timeUtils';
 
 const SSH_URL_REGEX = /ssh:\/\//i;
 
@@ -25,8 +24,8 @@ const SSH_URL_REGEX = /ssh:\/\//i;
  * Dockerode parses and handles the well-known `DOCKER_*` environment variables, but it doesn't let us pass those values as-is to the constructor
  * Thus we will temporarily update `process.env` and pass nothing to the constructor
  */
-export async function refreshDockerode(): Promise<void> {
-    await callWithTelemetryAndErrorHandling(
+export async function refreshDockerode(): Promise<Dockerode> {
+    return callWithTelemetryAndErrorHandling(
         ext.dockerClient ? 'docker-context.change' : 'docker-context.initialize',
         async (actionContext: IActionContext) => {
 
@@ -42,8 +41,7 @@ export async function refreshDockerode(): Promise<void> {
                     actionContext.telemetry.properties.hostSource = 'docker.dockerodeOptions';
                     actionContext.telemetry.measurements.retrievalTimeMs = 0;
                     ext.treeInitError = undefined;
-                    ext.dockerClient = new DockerodeApiClient(new Dockerode(<Dockerode.DockerOptions>overrideDockerodeOptions));
-                    return;
+                    return new Dockerode(<Dockerode.DockerOptions>overrideDockerodeOptions);
                 }
 
                 // Set up environment variables
@@ -89,7 +87,7 @@ export async function refreshDockerode(): Promise<void> {
                 try {
                     ext.treeInitError = undefined;
                     process.env = newEnv;
-                    ext.dockerClient = new DockerodeApiClient(new Dockerode());
+                    return new Dockerode();
                 } finally {
                     process.env = oldEnv;
                 }
@@ -155,7 +153,7 @@ async function validateSshAuthSock(newEnv: NodeJS.ProcessEnv): Promise<boolean> 
     });
 
     // Unfortunately Socket.setTimeout() does not actually work when attempting to establish a connection, so we need to race
-    return await Promise.race([connectPromise, delay(1000, cts.token).then(() => false)])
+    return await Promise.race([connectPromise, new TimeoutPromiseSource(1000).promise])
         .finally(() => {
             authSock.end();
             cts.dispose();

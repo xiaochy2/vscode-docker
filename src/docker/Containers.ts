@@ -14,7 +14,7 @@ export interface DockerContainer extends DockerObject {
     readonly Image: string;
     readonly ImageID: string;
     readonly NetworkSettings?: {
-        readonly Networks?: { [key: string]: unknown };
+        readonly Networks?: { readonly [key: string]: unknown };
     };
     readonly Ports?: {
         readonly PublicPort?: number;
@@ -35,8 +35,6 @@ export interface DockerContainerInspection extends DockerObject {
             }[];
         };
     };
-
-    // readonly [key: string]: unknown;
 }
 
 export const NonComposeGroupName = localize('vscode-docker.tree.containers.otherContainers', 'Other Containers');

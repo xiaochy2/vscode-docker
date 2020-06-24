@@ -4,15 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event, EventEmitter } from 'vscode';
-import { UserCancelledError } from 'vscode-azureextensionui';
-import { CancellationPromiseSource } from '../utils/promiseUtils';
 
 export interface ContextManager {
     readonly onContextChanged: Event<void>;
-    readonly contextChangedCancellationPromise: Promise<never>;
+    refresh(): Promise<void>;
 }
 
-export const contextManager: ContextManager = {
-    onContextChanged: new EventEmitter<void>().event,
-    contextChangedCancellationPromise: new CancellationPromiseSource(UserCancelledError).promise,
-};
+class DockerContextManager implements ContextManager {
+    private readonly emitter: EventEmitter<void> = new EventEmitter<void>();
+
+    public get onContextChanged(): Event<void> {
+        return this.emitter.event;
+    }
+
+    public async refresh(): Promise<void> {
+        this.emitter.fire();
+    }
+}
+
+export const contextManager = new DockerContextManager();

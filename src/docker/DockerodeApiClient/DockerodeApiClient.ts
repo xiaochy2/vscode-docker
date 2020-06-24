@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import Dockerode = require('dockerode');
+import { Disposable } from 'vscode';
 import { IActionContext, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
 import { localize } from '../../localize';
-import { getCancelPromise, TimeoutPromiseSource } from '../../utils/promiseUtils';
-import { refreshDockerode } from '../../utils/refreshDockerode';
+import { CancellationPromiseSource, getCancelPromise, TimeoutPromiseSource } from '../../utils/promiseUtils';
 import { DockerInfo, PruneResult } from '../Common';
 import { ContainerState, DockerContainer, DockerContainerInspection } from '../Containers';
 import { ContextManager } from '../ContextManager';
@@ -23,19 +23,32 @@ import { getComposeProjectName, getContainerName, getFullTagFromDigest } from '.
 // 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
 const dockerodeCallTimeout = 20 * 1000;
 
-export class DockerodeApiClient implements DockerApiClient {
+export class DockerodeApiClient implements DockerApiClient, Disposable {
     private contextChangingPromise: Promise<void> | undefined;
+    private contextChangeCps: CancellationPromiseSource;
+    private dockerodeClient: Dockerode;
+    private readonly contextChangedDisposable: Disposable;
 
-    public constructor(private dockerodeClient: Dockerode, private readonly contextManager: ContextManager) {
-        this.contextManager.onContextChanged(async () => {
-            this.contextChangingPromise = refreshDockerode();
+    public constructor(dockerodeClientPromiseCallback: () => Promise<Dockerode>, private readonly contextManager: ContextManager) {
+        this.contextChangeCps = new CancellationPromiseSource();
+        this.contextChangingPromise = this.load(dockerodeClientPromiseCallback);
+
+        this.contextChangedDisposable = this.contextManager.onContextChanged(async () => {
+            this.contextChangeCps.cancel();
+            this.contextChangeCps = new CancellationPromiseSource();
+
+            this.contextChangingPromise = this.load(dockerodeClientPromiseCallback);
             await this.contextChangingPromise;
             this.contextChangingPromise = undefined;
         });
     }
 
+    public dispose(): void {
+        this.contextChangedDisposable.dispose();
+    }
+
     public async info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo> {
-        return this.callWithErrorHandling<{ OSType: 'linux' | 'windows' }>(context, async () => this.dockerodeClient.info(), token);
+        return this.callWithErrorHandling(context, async () => this.dockerodeClient.info(), token);
     }
 
     public async getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]> {
@@ -266,7 +279,7 @@ export class DockerodeApiClient implements DockerApiClient {
                 await this.contextChangingPromise;
             }
 
-            const promises: Promise<T>[] = [tps.promise, this.contextManager.contextChangedCancellationPromise, callback()];
+            const promises: Promise<T>[] = [tps.promise, this.contextChangeCps.promise, callback()];
 
             if (token) {
                 promises.push(getCancelPromise(token, UserCancelledError));
@@ -291,5 +304,9 @@ export class DockerodeApiClient implements DockerApiClient {
             evt.dispose();
             tps.dispose();
         }
+    }
+
+    private async load(dockerodeClientCallback: () => Promise<Dockerode>): Promise<void> {
+        this.dockerodeClient = await dockerodeClientCallback();
     }
 }

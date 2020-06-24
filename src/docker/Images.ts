@@ -5,10 +5,7 @@
 
 import { DockerObject } from './Common';
 
-export interface DockerImage extends DockerObject {
-    foo?: string;
-    // readonly repository: string;
-}
+export type DockerImage = DockerObject
 
 export interface DockerImageInspection extends DockerObject {
     readonly Config?: {
