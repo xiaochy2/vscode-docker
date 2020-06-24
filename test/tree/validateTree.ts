@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { AzExtParentTreeItem, AzExtTreeItem, ext, IActionContext } from '../../extension.bundle';
+import { DockerodeApiClient, AzExtParentTreeItem, AzExtTreeItem, ext, IActionContext } from '../../extension.bundle';
 import { runWithSetting } from '../runWithSetting';
 
 export function generateCreatedTimeInSec(days: number): number {
@@ -69,18 +69,18 @@ interface ITestMockerodeOptions {
 }
 
 async function runWithMockerode(options: ITestMockerodeOptions, callback: () => Promise<void>): Promise<void> {
-    const oldDockerode = ext.dockerode;
+    const oldClient = ext.dockerClient;
 
     try {
-        ext.dockerode = <any>{
+        ext.dockerClient = new DockerodeApiClient(<any>{
             listContainers: async () => options.containers,
             listImages: async () => options.images,
             listVolumes: async () => { return { Volumes: options.volumes } },
             listNetworks: async () => options.networks
-        };
+        });
         await callback();
     } finally {
-        ext.dockerode = oldDockerode;
+        ext.dockerClient = oldClient;
     }
 }
 

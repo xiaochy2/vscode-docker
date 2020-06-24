@@ -9,6 +9,7 @@ import * as os from 'os';
 import * as url from 'url';
 import { CancellationTokenSource, workspace } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { DockerodeApiClient } from '../docker/DockerodeApiClient/DockerodeApiClient';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { addDockerSettingsToEnv } from './addDockerSettingsToEnv';
@@ -26,7 +27,7 @@ const SSH_URL_REGEX = /ssh:\/\//i;
  */
 export async function refreshDockerode(): Promise<void> {
     await callWithTelemetryAndErrorHandling(
-        ext.dockerode ? 'docker-context.change' : 'docker-context.initialize',
+        ext.dockerClient ? 'docker-context.change' : 'docker-context.initialize',
         async (actionContext: IActionContext) => {
 
             try {
@@ -41,7 +42,7 @@ export async function refreshDockerode(): Promise<void> {
                     actionContext.telemetry.properties.hostSource = 'docker.dockerodeOptions';
                     actionContext.telemetry.measurements.retrievalTimeMs = 0;
                     ext.treeInitError = undefined;
-                    ext.dockerode = new Dockerode(<Dockerode.DockerOptions>overrideDockerodeOptions);
+                    ext.dockerClient = new DockerodeApiClient(new Dockerode(<Dockerode.DockerOptions>overrideDockerodeOptions));
                     return;
                 }
 
@@ -88,7 +89,7 @@ export async function refreshDockerode(): Promise<void> {
                 try {
                     ext.treeInitError = undefined;
                     process.env = newEnv;
-                    ext.dockerode = new Dockerode();
+                    ext.dockerClient = new DockerodeApiClient(new Dockerode());
                 } finally {
                     process.env = oldEnv;
                 }
