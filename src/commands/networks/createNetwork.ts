@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { window } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { DriverType } from '../../docker/Networks';
 import { ext } from '../../extensionVariables';
@@ -17,7 +16,9 @@ export async function createNetwork(context: IActionContext): Promise<void> {
         prompt: localize('vscode-docker.commands.networks.create.promptName', 'Name of the network')
     });
 
-    const drivers = (await getDockerOSType(context)) === 'windows'
+    const osType = await getDockerOSType(context);
+
+    const drivers: { label: DriverType }[] = osType === 'windows'
         ? [
             { label: 'nat' },
             { label: 'transparent' }
@@ -36,8 +37,5 @@ export async function createNetwork(context: IActionContext): Promise<void> {
         }
     );
 
-    const result = await ext.dockerClient.createNetwork(context, { name: name, driver: driverSelection.label as DriverType });
-
-    /* eslint-disable-next-line @typescript-eslint/no-floating-promises */
-    window.showInformationMessage(localize('vscode-docker.commands.networks.create.created', 'Network Created with ID {0}', result.id.substr(0, 12)));
+    await ext.dockerClient.createNetwork(context, { Name: name, Driver: driverSelection.label });
 }

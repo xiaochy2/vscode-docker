@@ -196,8 +196,8 @@ export class DockerodeApiClient implements DockerApiClient {
         };
     }
 
-    public async createNetwork(context: IActionContext, options: { name: string, driver: DriverType }, token?: CancellationToken): Promise<{ id: string }> {
-        throw new NotSupportedError();
+    public async createNetwork(context: IActionContext, options: { Name: string, Driver: DriverType }, token?: CancellationToken): Promise<void> {
+        await this.callWithErrorHandling(context, async () => this.dockerodeClient.createNetwork(options), token);
     }
 
     public async removeNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
@@ -240,10 +240,6 @@ export class DockerodeApiClient implements DockerApiClient {
         };
     }
 
-    public async createVolume(context: IActionContext, info: DockerVolume, token?: CancellationToken): Promise<void> {
-        throw new NotSupportedError();
-    }
-
     public async removeVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const volume = this.dockerodeClient.getVolume(ref);
         return this.callWithErrorHandling(context, async () => volume.remove({ force: true }), token);
@@ -253,12 +249,10 @@ export class DockerodeApiClient implements DockerApiClient {
         throw new NotSupportedError();
     }
 
-    private async callWithErrorHandling<T>(context: IActionContext | undefined, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {
+    private async callWithErrorHandling<T>(context: IActionContext, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {
         const tps = new TimeoutPromiseSource(dockerodeCallTimeout);
         const evt = tps.onTimeout(() => {
-            if (context) {
-                context.errorHandling.suppressReportIssue = true;
-            }
+            context.errorHandling.suppressReportIssue = true;
         });
 
         try {

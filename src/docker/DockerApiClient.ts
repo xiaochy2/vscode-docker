@@ -33,13 +33,12 @@ export interface DockerApiClient {
     getNetworks(context: IActionContext, token?: CancellationToken): Promise<DockerNetwork[]>;
     inspectNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerNetworkInspection>;
     pruneNetworks(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
-    createNetwork(context: IActionContext, options: { name: string, driver: DriverType }, token?: CancellationToken): Promise<{ id: string }>;
+    createNetwork(context: IActionContext, options: { Name: string, Driver: DriverType }, token?: CancellationToken): Promise<void>;
     removeNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
 
     getVolumes(context: IActionContext, token?: CancellationToken): Promise<DockerVolume[]>;
     inspectVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerVolumeInspection>;
     pruneVolumes(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
-    createVolume(context: IActionContext, info: DockerVolume, token?: CancellationToken): Promise<void>;
     removeVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
 
     getContexts(context: IActionContext, token?: CancellationToken): Promise<DockerContext[]>;

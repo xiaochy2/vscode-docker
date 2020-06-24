@@ -9,6 +9,7 @@
 
 import * as util from 'util';
 import * as vscode from 'vscode';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import ChildProcessProvider from './coreclr/ChildProcessProvider';
@@ -208,14 +209,19 @@ class DockerLogsTracker extends vscode.Disposable {
     }
 
     private async startListening(): Promise<void> {
-        try {
-            this.logStream = await ext.dockerClient.getContainerLogs(undefined, this.containerName) as LogStream;
+        return callWithTelemetryAndErrorHandling('dockerServerReadyAction.dockerLogsTracker.startListening', async (context: IActionContext) => {
+            // Don't actually telemetrize or show anything (same as prior behavior), but wrap call to get an IActionContext
+            context.telemetry.suppressAll = true;
+            context.errorHandling.suppressDisplay = true;
+            context.errorHandling.rethrow = false;
+
+            this.logStream = await ext.dockerClient.getContainerLogs(context, this.containerName) as LogStream;
 
             this.logStream.on('data', (data) => {
                 // eslint-disable-next-line @typescript-eslint/tslint/config
                 this.detector.detectPattern(data.toString());
             });
-        } catch { }
+        });
     }
 }
 
