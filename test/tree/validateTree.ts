@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import * as Dockerode from 'dockerode';
 import { AzExtParentTreeItem, AzExtTreeItem, ext, IActionContext } from '../../extension.bundle';
 import { runWithSetting } from '../runWithSetting';
 
@@ -31,13 +30,13 @@ export interface ITestTreeItem {
     children?: ITestTreeItem[];
 }
 
-export async function validateTree(rootTreeItem: AzExtParentTreeItem, treePrefix: string, treeOptions: IValidateTreeOptions, dockerodeOptions: ITestDockerodeOptions, expectedNodes: ITestTreeItem[]): Promise<AzExtTreeItem[]> {
+export async function validateTree(rootTreeItem: AzExtParentTreeItem, treePrefix: string, treeOptions: IValidateTreeOptions, mockerodeOptions: ITestMockerodeOptions, expectedNodes: ITestTreeItem[]): Promise<AzExtTreeItem[]> {
     let actualNodes: AzExtTreeItem[] = [];
     await runWithSetting(`${treePrefix}.sortBy`, treeOptions.sortBy, async () => {
         await runWithSetting(`${treePrefix}.groupBy`, treeOptions.groupBy, async () => {
             await runWithSetting(`${treePrefix}.label`, treeOptions.label, async () => {
                 await runWithSetting(`${treePrefix}.description`, treeOptions.description, async () => {
-                    await runWithDockerode(dockerodeOptions, async () => {
+                    await runWithMockerode(mockerodeOptions, async () => {
                         await rootTreeItem.refresh();
 
                         const context: IActionContext = { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} } };
@@ -62,18 +61,18 @@ export async function validateTree(rootTreeItem: AzExtParentTreeItem, treePrefix
     return actualNodes;
 }
 
-interface ITestDockerodeOptions {
-    containers?: Partial<Dockerode.ContainerInfo>[],
-    images?: Partial<Dockerode.ImageInfo>[],
-    volumes?: Partial<Dockerode.VolumeInspectInfo>[],
-    networks?: Partial<Dockerode.NetworkInspectInfo>[]
+interface ITestMockerodeOptions {
+    containers?: unknown[],
+    images?: unknown[],
+    volumes?: unknown[],
+    networks?: unknown[]
 }
 
-async function runWithDockerode(options: ITestDockerodeOptions, callback: () => Promise<void>): Promise<void> {
+async function runWithMockerode(options: ITestMockerodeOptions, callback: () => Promise<void>): Promise<void> {
     const oldDockerode = ext.dockerode;
 
     try {
-        ext.dockerode = <Dockerode><any>{
+        ext.dockerode = <any>{
             listContainers: async () => options.containers,
             listImages: async () => options.images,
             listVolumes: async () => { return { Volumes: options.volumes } },

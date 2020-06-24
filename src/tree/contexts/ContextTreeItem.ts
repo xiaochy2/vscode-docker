@@ -20,7 +20,7 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public get createdTime(): number {
-        return this._item.createdTime;
+        return this._item.CreatedTime;
     }
 
     public get id(): string {
@@ -38,7 +38,7 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public get name(): string {
-        return this._item.name;
+        return this._item.Name;
     }
 
     public get current(): boolean {

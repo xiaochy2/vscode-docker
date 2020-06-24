@@ -3,15 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DockerObject } from './Common';
+import { UserCancelledError } from "vscode-azureextensionui";
+import { CancellationPromiseSource } from "../utils/promiseUtils";
 
-export type DriverType = 'host' | 'bridge' | 'macvlan';
-
-export interface DockerNetwork extends DockerObject {
-    readonly Driver: DriverType;
-}
-
-export interface DockerNetworkInspection extends DockerObject {
-    readonly foo: string;
-    // readonly [key: string]: unknown;
-}
+// TODO: fire this on context change
+// eslint-disable-next-line @typescript-eslint/tslint/config
+export const contextChangedCps = new CancellationPromiseSource(UserCancelledError);

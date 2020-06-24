@@ -49,7 +49,7 @@ export class NetworksTreeItem extends LocalRootTreeItemBase<DockerNetwork, Netwo
         let networks = await ext.dockerClient.getNetworks(context) || [];
 
         if (!showBuiltInNetworks) {
-            networks = networks.filter(network => !builtInNetworks.includes(network.name));
+            networks = networks.filter(network => !builtInNetworks.includes(network.Name));
         }
 
         return networks;
@@ -58,11 +58,11 @@ export class NetworksTreeItem extends LocalRootTreeItemBase<DockerNetwork, Netwo
     public getPropertyValue(item: DockerNetwork, property: NetworkProperty): string {
         switch (property) {
             case 'NetworkDriver':
-                return item.driver;
+                return item.Driver;
             case 'NetworkId':
-                return item.id.slice(0, 12);
+                return item.Id.slice(0, 12);
             case 'NetworkName':
-                return item.name;
+                return item.Name;
             default:
                 return getCommonPropertyValue(item, property);
         }

@@ -5,6 +5,7 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
 import { DockerContainer, NonComposeGroupName } from "../../docker/Containers";
+import { DockerImage } from "../../docker/Images";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { getThemedIconPath } from "../IconPath";
@@ -59,23 +60,26 @@ export class ContainersTreeItem extends LocalRootTreeItemBase<DockerContainer, C
     }
 
     public getPropertyValue(item: DockerContainer, property: ContainerProperty): string {
+        const networks = item.NetworkSettings?.Networks?.length > 0 ? Object.keys(item.NetworkSettings.Networks) : ['<none>'];
+        const ports = item.Ports?.length > 0 ? item.Ports.map(p => p.PublicPort) : ['<none>'];
+
         switch (property) {
             case 'ContainerId':
-                return item.id.slice(0, 12);
+                return item.Id.slice(0, 12);
             case 'ContainerName':
-                return item.name;
+                return item.Name;
             case 'Networks':
-                return item.networks.length > 0 ? item.networks.join(',') : '<none>';
+                return networks.join(',');
             case 'Ports':
-                return item.ports.length > 0 ? item.ports.join(',') : '<none>';
+                return ports.join(',');
             case 'State':
-                return item.state;
+                return item.State;
             case 'Status':
-                return item.status;
+                return item.Status;
             case 'Compose Project Name':
                 return item.composeProjectName;
             default:
-                return getImagePropertyValue(item.image, property);
+                return getImagePropertyValue(item as DockerImage, property);
         }
     }
 

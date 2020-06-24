@@ -79,10 +79,10 @@ export async function getDockerOSType(context: IActionContext): Promise<DockerOS
     if (!isWindows()) {
         // On Linux or macOS, this can only ever be linux,
         // so short-circuit the Docker call entirely.
-        return "linux";
+        return 'linux';
     } else {
         const info = await ext.dockerClient.info(context);
         // eslint-disable-next-line @typescript-eslint/tslint/config
-        return info.osType;
+        return info.OSType;
     }
 }

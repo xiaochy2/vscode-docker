@@ -21,7 +21,7 @@ export class NetworkTreeItem extends AzExtTreeItem {
     }
 
     public get contextValue(): string {
-        return builtInNetworks.includes(this._item.name) ? 'defaultNetwork' : 'customNetwork';
+        return builtInNetworks.includes(this._item.Name) ? 'defaultNetwork' : 'customNetwork';
     }
 
     public get id(): string {
@@ -29,15 +29,15 @@ export class NetworkTreeItem extends AzExtTreeItem {
     }
 
     public get networkId(): string {
-        return this._item.id;
+        return this._item.Id;
     }
 
     public get createdTime(): number {
-        return this._item.createdTime;
+        return this._item.CreatedTime;
     }
 
     public get networkName(): string {
-        return this._item.name;
+        return this._item.Name;
     }
 
     public get label(): string {

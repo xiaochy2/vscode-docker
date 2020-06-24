@@ -6,10 +6,12 @@
 import { DockerObject } from './Common';
 
 export interface DockerImage extends DockerObject {
-    readonly repository: string;
-    readonly config?: {
-        exposedPorts?: { [portAndProtocol: string]: unknown };
-    };
+    foo?: string;
+    // readonly repository: string;
 }
 
-export type DockerImageInspection = DockerImage
+export interface DockerImageInspection extends DockerObject {
+    readonly Config?: {
+        readonly ExposedPorts?: { readonly [portAndProtocol: string]: unknown; };
+    };
+}

@@ -10,3 +10,8 @@ export interface DockerContext extends DockerObject {
     readonly dockerEndpoint?: string;
     readonly current: boolean;
 }
+
+export interface DockerContextInspection extends DockerObject {
+    readonly foo: string;
+    // readonly [key: string]: unknown;
+}

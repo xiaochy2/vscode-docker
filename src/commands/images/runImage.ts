@@ -32,7 +32,7 @@ async function runImageCore(context: IActionContext, node: ImageTreeItem | undef
         context,
         node.fullTag,
         interactive,
-        inspectInfo?.config?.exposedPorts
+        inspectInfo?.Config?.ExposedPorts
     );
 
     const terminal = ext.terminalProvider.createTerminal(node.fullTag);

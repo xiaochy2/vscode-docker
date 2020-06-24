@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { NetworkInspectInfo } from 'dockerode';
 import { ext } from '../../extension.bundle';
 import { generateCreatedTimeISOString, ITestTreeItem, IValidateTreeOptions, validateTree } from './validateTree';
 
 // TODO: Update the test to validate the '1 month ago' description Issue #1758
-const testNetworks: Partial<NetworkInspectInfo>[] = [
+const testNetworks: unknown[] = [
     {
         Created: generateCreatedTimeISOString(1),
         Name: "zzz-bridge",

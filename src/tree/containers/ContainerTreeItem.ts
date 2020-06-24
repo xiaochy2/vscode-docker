@@ -24,19 +24,19 @@ export class ContainerTreeItem extends AzExtTreeItem {
     }
 
     public get createdTime(): number {
-        return this._item.createdTime;
+        return this._item.CreatedTime;
     }
 
     public get containerId(): string {
-        return this._item.id;
+        return this._item.Id;
     }
 
     public get containerName(): string {
-        return this._item.name;
+        return this._item.Name;
     }
 
     public get fullTag(): string {
-        return this._item.image.name;
+        return this._item.Image;
     }
 
     public get label(): string {
@@ -48,7 +48,7 @@ export class ContainerTreeItem extends AzExtTreeItem {
     }
 
     public get contextValue(): string {
-        return this._item.state + 'Container';
+        return this._item.State + 'Container';
     }
 
     /**
@@ -58,15 +58,15 @@ export class ContainerTreeItem extends AzExtTreeItem {
      */
     public get containerDesc(): { Id: string } {
         return {
-            Id: this._item.id,
+            Id: this._item.Id,
         };
     }
 
     public get iconPath(): IconPath {
-        if (this._item.status.includes('(unhealthy)')) {
+        if (this._item.Status.includes('(unhealthy)')) {
             return getThemedIconPath('statusWarning');
         } else {
-            return getContainerStateIcon(this._item.state);
+            return getContainerStateIcon(this._item.State);
         }
     }
 

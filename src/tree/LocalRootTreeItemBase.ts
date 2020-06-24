@@ -341,11 +341,11 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
     }
 
     private async getSortedItems(context: IActionContext): Promise<TItem[]> {
-        if (ext.dockerodeInitError === undefined) {
+        if (ext.treeInitError === undefined) {
             const items: TItem[] = await this.getItems(context) || [];
             return items.sort((a, b) => a.treeId.localeCompare(b.treeId));
         } else {
-            throw ext.dockerodeInitError;
+            throw ext.treeInitError;
         }
     }
 

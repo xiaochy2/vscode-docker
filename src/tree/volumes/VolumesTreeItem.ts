@@ -47,7 +47,7 @@ export class VolumesTreeItem extends LocalRootTreeItemBase<DockerVolume, VolumeP
     public getPropertyValue(item: DockerVolume, property: VolumeProperty): string {
         switch (property) {
             case 'VolumeName':
-                return item.name;
+                return item.Name;
             default:
                 return getCommonPropertyValue(item, property);
         }

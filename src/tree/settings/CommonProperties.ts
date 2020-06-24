@@ -30,7 +30,7 @@ export const sortByProperties: ITreePropertyInfo<CommonSortBy>[] = [
 export function getCommonPropertyValue(item: DockerObject, property: CommonProperty): string {
     switch (property) {
         case 'CreatedTime':
-            return moment(new Date(item.createdTime)).fromNow();
+            return moment(new Date(item.CreatedTime)).fromNow();
         default:
             throw new RangeError(localize('vscode-docker.tree.settings.unexpected1', 'Unexpected property "{0}".', property));
     }

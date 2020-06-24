@@ -11,7 +11,6 @@ import * as util from 'util';
 import * as vscode from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { callDockerode } from '../utils/callDockerode';
 import ChildProcessProvider from './coreclr/ChildProcessProvider';
 import CliDockerClient from './coreclr/CliDockerClient';
 import { ResolvedDebugConfiguration } from './DebugHelper';
@@ -204,30 +203,18 @@ class DockerLogsTracker extends vscode.Disposable {
             return;
         }
 
-        /* eslint-disable-next-line @typescript-eslint/no-floating-promises */
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.startListening();
     }
 
     private async startListening(): Promise<void> {
         try {
-            const container = await callDockerode(() => ext.dockerode.getContainer(this.containerName));
+            this.logStream = await ext.dockerClient.getContainerLogs(undefined, this.containerName) as LogStream;
 
-            container.logs(
-                {
-                    follow: true,
-                    stdout: true
-                },
-                (err, stream) => {
-                    if (err) {
-                        return;
-                    }
-
-                    this.logStream = <LogStream>stream;
-                    this.logStream.on('data', (data) => {
-                        // tslint:disable-next-line:no-unsafe-any
-                        this.detector.detectPattern(data.toString());
-                    });
-                });
+            this.logStream.on('data', (data) => {
+                // eslint-disable-next-line @typescript-eslint/tslint/config
+                this.detector.detectPattern(data.toString());
+            });
         } catch { }
     }
 }

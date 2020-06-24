@@ -5,8 +5,12 @@
 
 import { DockerObject } from './Common';
 
+export type VolumeDriverType = string;
+
 export interface DockerVolume extends DockerObject {
-    readonly type: string;
+    readonly Driver: VolumeDriverType;
 }
 
-export type DockerVolumeInspection = DockerVolume
+export interface DockerVolumeInspection extends DockerObject {
+    readonly foo?: string;
+}

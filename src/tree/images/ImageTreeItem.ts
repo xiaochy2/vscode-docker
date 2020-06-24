@@ -23,15 +23,15 @@ export class ImageTreeItem extends AzExtTreeItem {
     }
 
     public get createdTime(): number {
-        return this._item.createdTime;
+        return this._item.CreatedTime;
     }
 
     public get imageId(): string {
-        return this._item.id;
+        return this._item.Id;
     }
 
     public get fullTag(): string {
-        return this._item.name;
+        return this._item.Name;
     }
 
     public get label(): string {

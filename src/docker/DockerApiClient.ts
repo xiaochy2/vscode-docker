@@ -17,7 +17,7 @@ export interface DockerApiClient {
 
     getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]>;
     inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection>;
-    getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainer>;
+    getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<NodeJS.ReadableStream>;
     pruneContainers(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
     startContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
     restartContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;

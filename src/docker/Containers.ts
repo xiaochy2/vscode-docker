@@ -5,20 +5,38 @@
 
 import { localize } from '../localize';
 import { DockerObject } from './Common';
-import { DockerImage } from './Images';
 
-export type ContainerStatus = 'stopped' | 'running' | 'paused' | 'starting';
-export type ContainerState = 'todo' | 'todont';
+export type ContainerState = 'stopped' | 'running' | 'paused' | 'starting' | 'exited';
 
 export interface DockerContainer extends DockerObject {
-    readonly status: ContainerStatus;
-    readonly state: ContainerState;
-    readonly networks: string[];
-    readonly ports: number[];
-    readonly image: DockerImage;
+    readonly State: ContainerState;
+    readonly Status: string;
+    readonly Image: string;
+    readonly ImageID: string;
+    readonly NetworkSettings?: {
+        readonly Networks?: { [key: string]: unknown };
+    };
+    readonly Ports?: {
+        readonly PublicPort?: number;
+    }[];
+
     readonly composeProjectName: string;
 }
 
-export type DockerContainerInspection = DockerContainer
+export interface DockerContainerInspection extends DockerObject {
+    readonly HostConfig?: {
+        readonly Isolation?: string;
+    };
+    readonly NetworkSettings?: {
+        readonly Ports?: {
+            readonly [portAndProtocol: string]: {
+                readonly HostIp?: string;
+                readonly HostPort?: string;
+            }[];
+        };
+    };
+
+    // readonly [key: string]: unknown;
+}
 
 export const NonComposeGroupName = localize('vscode-docker.tree.containers.otherContainers', 'Other Containers');

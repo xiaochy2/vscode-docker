@@ -294,8 +294,7 @@ export class NetCoreDebugHelper implements DebugHelper {
         const dockerClient = new CliDockerClient(new ChildProcessProvider());
         if (containerOS === 'windows') {
             const containerInfo = await ext.dockerClient.inspectContainer(context, containerName);
-            const isolation = containerInfo.HostConfig.Isolation;
-            if (isolation && isolation === 'hyperv') {
+            if (containerInfo?.HostConfig?.Isolation === 'hyperv') {
                 context.errorHandling.suppressReportIssue = true;
                 throw new Error(localize('vscode-docker.debug.netcore.isolationNotSupported', 'Attaching a debugger to a Hyper-V container is not supported.'));
             }

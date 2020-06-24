@@ -23,11 +23,11 @@ export class VolumeTreeItem extends AzExtTreeItem {
     }
 
     public get createdTime(): number {
-        return this._item.createdTime;
+        return this._item.CreatedTime;
     }
 
     public get volumeName(): string {
-        return this._item.name;
+        return this._item.Name;
     }
 
     public get label(): string {
@@ -43,6 +43,6 @@ export class VolumeTreeItem extends AzExtTreeItem {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        return ext.dockerClient.removeVolume(context, this._item.id);
+        return ext.dockerClient.removeVolume(context, this._item.Id);
     }
 }

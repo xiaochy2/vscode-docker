@@ -29,7 +29,7 @@ export abstract class LocalGroupTreeItemBase<TItem extends DockerObject, TProper
     }
 
     public get maxCreatedTime(): number {
-        return Math.max(...this._items.map(i => i.createdTime));
+        return Math.max(...this._items.map(i => i.CreatedTime));
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {

@@ -40,7 +40,7 @@ export async function refreshDockerode(): Promise<void> {
                 if (overrideDockerodeOptions && Object.keys(overrideDockerodeOptions).length > 0) {
                     actionContext.telemetry.properties.hostSource = 'docker.dockerodeOptions';
                     actionContext.telemetry.measurements.retrievalTimeMs = 0;
-                    ext.dockerodeInitError = undefined;
+                    ext.treeInitError = undefined;
                     ext.dockerode = new Dockerode(<Dockerode.DockerOptions>overrideDockerodeOptions);
                     return;
                 }
@@ -86,7 +86,7 @@ export async function refreshDockerode(): Promise<void> {
                 }
 
                 try {
-                    ext.dockerodeInitError = undefined;
+                    ext.treeInitError = undefined;
                     process.env = newEnv;
                     ext.dockerode = new Dockerode();
                 } finally {
@@ -94,7 +94,7 @@ export async function refreshDockerode(): Promise<void> {
                 }
             } catch (error) {
                 // The error will be displayed in the tree
-                ext.dockerodeInitError = error;
+                ext.treeInitError = error;
                 actionContext.errorHandling.suppressReportIssue = true;
                 actionContext.errorHandling.suppressDisplay = true;
 

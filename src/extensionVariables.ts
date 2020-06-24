@@ -36,7 +36,7 @@ export namespace ext {
     export let keytar: IKeytar | undefined;
     export let dockerClient: DockerApiClient;
     export let dockerode: Dockerode;
-    export let dockerodeInitError: unknown;
+    export let treeInitError: unknown;
     export const ignoreBundle = !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || '');
 
     export let imagesTree: AzExtTreeDataProvider;

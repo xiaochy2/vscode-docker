@@ -4,11 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { ContainerInfo } from 'dockerode';
 import { ext } from '../../extension.bundle';
 import { generateCreatedTimeInSec, ITestTreeItem, IValidateTreeOptions, validateTree } from './validateTree';
 
-const testContainers: Partial<ContainerInfo>[] = [
+const testContainers: unknown[] = [
     {
         Id: "9330566c414439f4873edd95689b559466993681f7b9741005b5a74786134202",
         Names: ["/containera/vba", "/vigorous_booth", "/containerb/vbb"],

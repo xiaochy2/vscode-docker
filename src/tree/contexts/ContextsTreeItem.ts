@@ -49,7 +49,7 @@ export class ContextsTreeItem extends LocalRootTreeItemBase<DockerContext, Conte
     public getPropertyValue(item: DockerContext, property: ContextProperty): string {
         switch (property) {
             case 'Name':
-                return item.name;
+                return item.Name;
             case 'Description':
                 return item.description;
             case 'DockerEndpoint':

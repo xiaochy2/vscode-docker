@@ -6,19 +6,20 @@
 export type DockerOSType = 'linux' | 'windows';
 
 export interface DockerInfo {
-    readonly osType: DockerOSType;
+    readonly OSType: DockerOSType;
+    // readonly [key: string]: unknown;
 }
 
 export interface PruneResult {
-    readonly objectsRemoved: number;
-    readonly spaceFreed: number;
+    readonly ObjectsDeleted: number;
+    readonly SpaceReclaimed: number;
 }
 
 export interface DockerObject {
-    readonly id: string;
-    readonly name: string;
-    readonly createdTime: number;
+    readonly Id: string;
+    readonly Name: string;
+    readonly CreatedTime: number;
 
     // For the tree view
-    readonly treeId: string;
+    readonly treeId: string | undefined;
 }

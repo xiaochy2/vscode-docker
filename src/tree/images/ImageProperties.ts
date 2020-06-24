@@ -50,17 +50,17 @@ export function getImageGroupIcon(property: ImageProperty | CommonGroupBy): Icon
 }
 
 export function getImagePropertyValue(item: DockerImage, property: ImageProperty): string {
-    const parsedFullTag = parseFullTag(item.name);
+    const parsedFullTag = parseFullTag(item.Name);
     let registry: string | undefined;
     switch (property) {
         case 'FullTag':
             if (parsedFullTag.registry) {
-                return item.name.replace(parsedFullTag.registry, truncateRegistry(parsedFullTag.registry));
+                return item.Name.replace(parsedFullTag.registry, truncateRegistry(parsedFullTag.registry));
             } else {
-                return item.name;
+                return item.Name;
             }
         case 'ImageId':
-            return item.id.replace('sha256:', '').slice(0, 12);
+            return item.Id.replace('sha256:', '').slice(0, 12);
         case 'Registry':
             registry = parsedFullTag.registry;
             if (!registry) {

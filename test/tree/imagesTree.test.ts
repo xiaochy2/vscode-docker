@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ImageInfo } from 'dockerode';
 import { ext } from '../../extension.bundle';
 import { runWithSetting } from '../runWithSetting';
 import { generateCreatedTimeInSec, ITestTreeItem, IValidateTreeOptions, validateTree } from './validateTree';
 
-const testImages: Partial<ImageInfo>[] = [
+const testImages: unknown[] = [
     {
         RepoTags: ['a'],
         Id: 'sha256:b0648d86f18e6141a8bfa98d4d17d5180aa2699af7f27eac5491fd1f950f6f05',

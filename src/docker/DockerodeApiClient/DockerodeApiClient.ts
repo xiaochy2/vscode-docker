@@ -4,59 +4,71 @@
  *--------------------------------------------------------------------------------------------*/
 
 import Dockerode = require('dockerode');
-import * as os from 'os';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
+import { localize } from '../../localize';
+import { getCancelPromise, TimeoutPromiseSource } from '../../utils/promiseUtils';
 import { DockerInfo, PruneResult } from '../Common';
-import { DockerContainer, DockerContainerInspection } from '../Containers';
+import { ContainerState, DockerContainer, DockerContainerInspection } from '../Containers';
+import { contextChangedCps } from '../ContextHandler';
 import { DockerContext } from '../Contexts';
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
 import { DockerNetwork, DockerNetworkInspection, DriverType } from '../Networks';
 import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
-import { DockerodeContainer, DockerodeContainerInspection, DockerodeImage, DockerodeImageInspection, DockerodeNetwork, DockerodeNetworkInspection } from './DockerodeObjects';
+import { getComposeProjectName, getContainerName, getFullTagFromDigest } from './DockerodeUtils';
+
+// 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
+const dockerodeCallTimeout = 20 * 1000;
 
 export class DockerodeApiClient implements DockerApiClient {
+    private contextChangingPromise: Promise<void> | undefined;
+
     public constructor(private readonly dockerodeClient: Dockerode) {
     }
 
     public async info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo> {
-        if (os.platform() === 'win32') {
-            const result = await this.callWithErrorHandling<{ OSType: 'linux' | 'windows' }>(context, async () => this.dockerodeClient.info(), token);
-
-            return {
-                osType: result?.OSType,
-            };
-        }
-
-        return {
-            osType: 'linux',
-        };
+        return this.callWithErrorHandling<{ OSType: 'linux' | 'windows' }>(context, async () => this.dockerodeClient.info(), token);
     }
 
     public async getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]> {
         const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listContainers({ all: true }), token);
 
-        return result.map(ci => new DockerodeContainer(ci));
+        return result.map(ci => {
+            return {
+                ...ci,
+                composeProjectName: getComposeProjectName(ci),
+                Name: getContainerName(ci),
+                CreatedTime: ci.Created * 1000,
+                State: ci.State as ContainerState,
+                treeId: `${ci.Id}${ci.State}`,
+            }
+        });
     }
 
     public async inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection> {
         const container = this.dockerodeClient.getContainer(ref);
         const result = await this.callWithErrorHandling(context, async () => container.inspect(), token);
 
-        return new DockerodeContainerInspection(result);
+        return {
+            ...result,
+            CreatedTime: new Date(result.Created).valueOf(),
+            treeId: undefined, // Not needed on inspect info
+        }
+
     }
 
-    public async getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainer> {
-        throw new NotSupportedError();
+    public async getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<NodeJS.ReadableStream> {
+        const container = this.dockerodeClient.getContainer(ref);
+        return this.callWithErrorHandling(context, async () => container.logs({ follow: true, stdout: true }));
     }
 
     public async pruneContainers(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
         const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneContainers(), token);
         return {
-            objectsRemoved: result.ContainersDeleted.length,
-            spaceFreed: result.SpaceReclaimed,
+            ...result,
+            ObjectsDeleted: result.ContainersDeleted.length,
         };
     }
 
@@ -86,30 +98,46 @@ export class DockerodeApiClient implements DockerApiClient {
 
         for (const image of images) {
             if (!image.RepoTags) {
-                result.push(new DockerodeImage(DockerodeImage.getFullTagFromDigest(image), image));
+                const fullTag = getFullTagFromDigest(image);
+
+                result.push({
+                    ...image,
+                    Name: fullTag,
+                    CreatedTime: image.Created * 1000,
+                    treeId: `${fullTag}${image.Id}`,
+                });
             } else {
                 for (const fullTag of image.RepoTags) {
-                    result.push(new DockerodeImage(fullTag, image));
+                    result.push({
+                        ...image,
+                        Name: fullTag,
+                        CreatedTime: image.Created * 1000,
+                        treeId: `${fullTag}${image.Id}`,
+                    });
                 }
             }
         }
 
         return result;
-
     }
 
     public async inspectImage(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerImageInspection> {
         const image = this.dockerodeClient.getImage(ref);
         const result = await this.callWithErrorHandling(context, async () => image.inspect(), token);
 
-        return new DockerodeImageInspection(ref, result);
+        return {
+            ...result,
+            CreatedTime: new Date(result.Created).valueOf(),
+            treeId: undefined, // Not needed on inspect info
+            Name: undefined, // Not needed on inspect info
+        };
     }
 
     public async pruneImages(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
         const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneImages(), token);
         return {
-            objectsRemoved: result.ImagesDeleted.length,
-            spaceFreed: result.SpaceReclaimed,
+            ...result,
+            ObjectsDeleted: result.ImagesDeleted.length,
         };
     }
 
@@ -134,23 +162,37 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async getNetworks(context: IActionContext, token?: CancellationToken): Promise<DockerNetwork[]> {
-        const result: Dockerode.NetworkInfo[] = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listNetworks(), token);
+        const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listNetworks(), token);
 
-        return result.map(ni => new DockerodeNetwork(ni));
+        return result.map(ni => {
+            return {
+                ...ni,
+                /* eslint-disable @typescript-eslint/tslint/config */
+                CreatedTime: new Date(ni.Created).valueOf(),
+                treeId: ni.Id,
+                /* eslint-enable @typescript-eslint/tslint/config */
+            }
+        });
     }
 
     public async inspectNetwork(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerNetworkInspection> {
         const network = this.dockerodeClient.getNetwork(ref);
         const result = await this.callWithErrorHandling(context, async () => network.inspect(), token);
 
-        return new DockerodeNetworkInspection(result);
+        return {
+            ...result,
+            // eslint-disable-next-line @typescript-eslint/tslint/config
+            CreatedTime: new Date(result.Created).valueOf(),
+            treeId: undefined, // Not needed on inspect info
+            Name: undefined, // Not needed on inspect info
+        };
     }
 
     public async pruneNetworks(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
         const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneNetworks(), token);
         return {
-            objectsRemoved: result.NetworksDeleted.length,
-            spaceFreed: 0,
+            SpaceReclaimed: 0,
+            ObjectsDeleted: result.NetworksDeleted.length,
         };
     }
 
@@ -164,18 +206,37 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async getVolumes(context: IActionContext, token?: CancellationToken): Promise<DockerVolume[]> {
-        throw new NotSupportedError();
+        const result = (await this.callWithErrorHandling(context, async () => this.dockerodeClient.listVolumes(), token)).Volumes;
+
+        return result.map(vi => {
+            return {
+                ...vi,
+                // eslint-disable-next-line @typescript-eslint/tslint/config, @typescript-eslint/no-explicit-any
+                CreatedTime: new Date((vi as any).CreatedAt).valueOf(),
+                Id: undefined, // Not defined for volumes
+                treeId: vi.Name,
+            }
+        });
     }
 
     public async inspectVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerVolumeInspection> {
-        throw new NotSupportedError();
+        const volume = this.dockerodeClient.getVolume(ref);
+        const result = await this.callWithErrorHandling(context, async () => volume.inspect(), token);
+
+        return {
+            ...result,
+            // eslint-disable-next-line @typescript-eslint/tslint/config, @typescript-eslint/no-explicit-any
+            CreatedTime: new Date((result as any).CreatedAt).valueOf(),
+            Id: undefined, // Not defined for volumes
+            treeId: undefined, // Not needed on inspect info
+        };
     }
 
     public async pruneVolumes(context: IActionContext, token?: CancellationToken): Promise<PruneResult> {
         const result = await this.callWithErrorHandling(context, async () => this.dockerodeClient.pruneVolumes(), token);
         return {
-            objectsRemoved: result.VolumesDeleted.length,
-            spaceFreed: result.SpaceReclaimed,
+            ...result,
+            ObjectsDeleted: result.VolumesDeleted.length,
         };
     }
 
@@ -192,7 +253,43 @@ export class DockerodeApiClient implements DockerApiClient {
         throw new NotSupportedError();
     }
 
-    private async callWithErrorHandling<T>(context: IActionContext, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {
-        throw new NotSupportedError();
+    private async callWithErrorHandling<T>(context: IActionContext | undefined, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {
+        const tps = new TimeoutPromiseSource(dockerodeCallTimeout);
+        const evt = tps.onTimeout(() => {
+            if (context) {
+                context.errorHandling.suppressReportIssue = true;
+            }
+        });
+
+        try {
+            if (this.contextChangingPromise) {
+                await this.contextChangingPromise;
+            }
+
+            const promises: Promise<T>[] = [tps.promise, contextChangedCps.promise, callback()];
+
+            if (token) {
+                promises.push(getCancelPromise(token, UserCancelledError));
+            }
+
+            try {
+                return await Promise.race(promises);
+            } catch (err) {
+                if (context) {
+                    context.errorHandling.suppressReportIssue = true;
+                }
+
+                const error = parseError(err);
+
+                if (error?.errorType === 'ENOENT') {
+                    throw new Error(localize('vscode-docker.utils.dockerode.failedToConnect', 'Failed to connect. Is Docker installed and running? Error: {0}', error.message));
+                }
+
+                throw err;
+            }
+        } finally {
+            evt.dispose();
+            tps.dispose();
+        }
     }
 }

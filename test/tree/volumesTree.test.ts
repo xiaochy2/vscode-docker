@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VolumeInspectInfo } from 'dockerode';
 import { ext } from '../../extension.bundle';
 import { generateCreatedTimeISOString, ITestTreeItem, IValidateTreeOptions, validateTree } from './validateTree';
 // TODO: Update the test to validate the '1 month ago' description Issue #1758
-const testVolumes: Partial<VolumeInspectInfo & { CreatedAt: string }>[] = [
+const testVolumes: unknown[] = [
     {
         CreatedAt: generateCreatedTimeISOString(1),
         Name: "nginxVol",
