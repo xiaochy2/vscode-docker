@@ -8,9 +8,10 @@ import { IActionContext, parseError, UserCancelledError } from 'vscode-azureexte
 import { CancellationToken } from 'vscode-languageclient';
 import { localize } from '../../localize';
 import { getCancelPromise, TimeoutPromiseSource } from '../../utils/promiseUtils';
+import { refreshDockerode } from '../../utils/refreshDockerode';
 import { DockerInfo, PruneResult } from '../Common';
 import { ContainerState, DockerContainer, DockerContainerInspection } from '../Containers';
-import { contextChangedCps } from '../ContextHandler';
+import { ContextManager } from '../ContextManager';
 import { DockerContext } from '../Contexts';
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
@@ -25,7 +26,12 @@ const dockerodeCallTimeout = 20 * 1000;
 export class DockerodeApiClient implements DockerApiClient {
     private contextChangingPromise: Promise<void> | undefined;
 
-    public constructor(private readonly dockerodeClient: Dockerode) {
+    public constructor(private dockerodeClient: Dockerode, private readonly contextManager: ContextManager) {
+        this.contextManager.onContextChanged(async () => {
+            this.contextChangingPromise = refreshDockerode();
+            await this.contextChangingPromise;
+            this.contextChangingPromise = undefined;
+        });
     }
 
     public async info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo> {
@@ -260,7 +266,7 @@ export class DockerodeApiClient implements DockerApiClient {
                 await this.contextChangingPromise;
             }
 
-            const promises: Promise<T>[] = [tps.promise, contextChangedCps.promise, callback()];
+            const promises: Promise<T>[] = [tps.promise, this.contextManager.contextChangedCancellationPromise, callback()];
 
             if (token) {
                 promises.push(getCancelPromise(token, UserCancelledError));
