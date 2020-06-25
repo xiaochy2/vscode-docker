@@ -50,17 +50,19 @@ export interface ContextManager {
 export class DockerContextManager implements ContextManager, Disposable {
     private readonly emitter: EventEmitter<DockerContext> = new EventEmitter<DockerContext>();
     private readonly contextsCache: AsyncLazy<DockerContext[]>;
+    private readonly watcherCallback: () => Promise<void>;
 
     public constructor() {
-        // eslint-disable-next-line @typescript-eslint/tslint/config
-        fs.watchFile(dockerConfigFile, async () => this.refresh());
-
         this.contextsCache = new AsyncLazy(async () => this.loadContexts());
+
+        this.watcherCallback = async () => this.refresh();
+        // eslint-disable-next-line @typescript-eslint/tslint/config
+        fs.watchFile(dockerConfigFile, this.watcherCallback);
     }
 
     public dispose(): void {
         // eslint-disable-next-line @typescript-eslint/tslint/config
-        fs.unwatchFile(dockerConfigFile, async () => this.refresh());
+        fs.unwatchFile(dockerConfigFile, this.watcherCallback);
 
         // eslint-disable-next-line no-unused-expressions
         ext.dockerClient?.dispose();
@@ -117,8 +119,10 @@ export class DockerContextManager implements ContextManager, Disposable {
     private async loadContexts(): Promise<DockerContext[]> {
         // TODO: handle settings, env var, telemetry
         return callWithTelemetryAndErrorHandling(ext.dockerClient ? 'docker-context.change' : 'docker-context.initialize', async (actionContext: IActionContext) => {
+            // docker-context.initialize and docker-context.change should be treated as "activation events", in that they aren't real user action
+            actionContext.telemetry.properties.isActivationEvent = 'true';
 
-            let dockerHost: string;
+            let dockerHost: string | undefined;
             const config = workspace.getConfiguration('docker');
             if ((dockerHost = config.get('host'))) { // Assignment + check is intentional
                 // TODO: telemetry
@@ -127,8 +131,12 @@ export class DockerContextManager implements ContextManager, Disposable {
             } else if (!(await fse.pathExists(dockerContextsFolder)) || (await fse.readdir(dockerContextsFolder)).length === 0) {
                 // If there's nothing inside ~/.docker/contexts/meta, then there's only the default, unmodifiable DOCKER_HOST-based context
                 // It is unnecessary to call `docker context inspect`
-                dockerHost = 'TODO';
                 // TODO: telemetry
+
+                // dockerHost can be set to an empty string and returned, Dockerode will handle it correctly
+
+            } else {
+                dockerHost = undefined;
             }
 
             if (dockerHost) {

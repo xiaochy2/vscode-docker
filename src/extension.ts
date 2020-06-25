@@ -121,6 +121,7 @@ export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: 
         );
 
         ctx.subscriptions.push(ext.dockerContextManager = new DockerContextManager());
+        // At initialization we need to force a refresh since the filesystem watcher would have no reason to trigger
         await ext.dockerContextManager.refresh();
 
         registerTrees();
@@ -223,7 +224,8 @@ namespace Configuration {
                     settings: null
                 });
 
-                // Refresh explorer if needed
+                // These settings will result in a need to change context that doesn't actually change the docker context
+                // So, force a manual refresh so the settings get picked up
                 if (e.affectsConfiguration('docker.host') ||
                     e.affectsConfiguration('docker.certPath') ||
                     e.affectsConfiguration('docker.tlsVerify') ||
