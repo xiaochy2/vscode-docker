@@ -122,53 +122,63 @@ export class DockerContextManager implements ContextManager, Disposable {
     private async loadContexts(): Promise<DockerContext[]> {
         // TODO: handle settings, env var, telemetry
         return callWithTelemetryAndErrorHandling(ext.dockerClient ? 'docker-context.change' : 'docker-context.initialize', async (actionContext: IActionContext) => {
-            // docker-context.initialize and docker-context.change should be treated as "activation events", in that they aren't real user action
-            actionContext.telemetry.properties.isActivationEvent = 'true';
+            try {
+                // docker-context.initialize and docker-context.change should be treated as "activation events", in that they aren't real user action
+                actionContext.telemetry.properties.isActivationEvent = 'true';
 
-            let dockerHost: string | undefined;
-            const config = workspace.getConfiguration('docker');
-            if ((dockerHost = config.get('host'))) { // Assignment + check is intentional
-                actionContext.telemetry.properties.hostSource = 'docker.host';
-            } else if ((dockerHost = process.env.DOCKER_HOST)) { // Assignment + check is intentional
-                actionContext.telemetry.properties.hostSource = 'env';
-            } else if (!(await fse.pathExists(dockerContextsFolder)) || (await fse.readdir(dockerContextsFolder)).length === 0) {
-                actionContext.telemetry.properties.hostSource = 'defaultContextOnly';
+                ext.treeInitError = undefined;
 
-                dockerHost = os.platform() === 'win32' ? WindowsLocalPipe : UnixLocalPipe;
-            } else {
-                dockerHost = undefined;
+                let dockerHost: string | undefined;
+                const config = workspace.getConfiguration('docker');
+                if ((dockerHost = config.get('host'))) { // Assignment + check is intentional
+                    actionContext.telemetry.properties.hostSource = 'docker.host';
+                } else if ((dockerHost = process.env.DOCKER_HOST)) { // Assignment + check is intentional
+                    actionContext.telemetry.properties.hostSource = 'env';
+                } else if (!(await fse.pathExists(dockerContextsFolder)) || (await fse.readdir(dockerContextsFolder)).length === 0) {
+                    actionContext.telemetry.properties.hostSource = 'defaultContextOnly';
+
+                    dockerHost = os.platform() === 'win32' ? WindowsLocalPipe : UnixLocalPipe;
+                } else {
+                    dockerHost = undefined;
+                }
+
+                if (dockerHost !== undefined) {
+                    actionContext.telemetry.properties.hostProtocol = new URL(dockerHost).protocol;
+
+                    return [{
+                        ...defaultContext,
+                        Current: true,
+                        DockerEndpoint: dockerHost,
+                    } as DockerContext];
+                }
+
+                // No value for DOCKER_HOST, and multiple contexts exist, so check them
+                const result: DockerContext[] = [];
+                const { stdout } = await execAsync('docker context ls --format="{{json .}}"', { timeout: 10000 });
+                const lines = LineSplitter.splitLines(stdout);
+
+                for (const line of lines) {
+                    result.push(JSON.parse(line) as DockerContext);
+                }
+
+                const currentContext = result.find(c => c.Current);
+
+                if (currentContext.Name === 'default') {
+                    actionContext.telemetry.properties.hostSource = 'defaultContextSelected';
+                } else {
+                    actionContext.telemetry.properties.hostSource = 'customContextSelected'
+                }
+
+                actionContext.telemetry.properties.hostProtocol = new URL(currentContext.DockerEndpoint).protocol;
+
+                return result;
+            } catch (err) {
+                ext.treeInitError = err;
+                actionContext.errorHandling.suppressDisplay = true;
+
+                // Rethrow the error to the telemetry handler
+                throw err;
             }
-
-            if (dockerHost !== undefined) {
-                actionContext.telemetry.properties.hostProtocol = new URL(dockerHost).protocol;
-
-                return [{
-                    ...defaultContext,
-                    Current: true,
-                    DockerEndpoint: dockerHost,
-                } as DockerContext];
-            }
-
-            // No value for DOCKER_HOST, and multiple contexts exist, so check them
-            const result: DockerContext[] = [];
-            const { stdout } = await execAsync('docker context ls --format="{{json .}}"', { timeout: 10000 });
-            const lines = LineSplitter.splitLines(stdout);
-
-            for (const line of lines) {
-                result.push(JSON.parse(line) as DockerContext);
-            }
-
-            const currentContext = result.find(c => c.Current);
-
-            if (currentContext.Name === 'default') {
-                actionContext.telemetry.properties.hostSource = 'defaultContextSelected';
-            } else {
-                actionContext.telemetry.properties.hostSource = 'customContextSelected'
-            }
-
-            actionContext.telemetry.properties.hostProtocol = new URL(currentContext.DockerEndpoint).protocol;
-
-            return result;
         });
     }
 }
