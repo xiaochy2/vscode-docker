@@ -10,13 +10,24 @@ import { dockerContextManager } from "../../utils/dockerContextManager";
 import { getThemedIconPath, IconPath } from '../IconPath';
 
 export class ContextTreeItem extends AzExtTreeItem {
-    public static contextValue: string = 'context';
-    public contextValue: string = ContextTreeItem.contextValue;
+    public static allContextRegExp: RegExp = /Context$/;
+    public static removableContextRegExp: RegExp = /^customContext$/i;
+
     private readonly _item: DockerContext;
 
     public constructor(parent: AzExtParentTreeItem, item: DockerContext) {
         super(parent);
         this._item = item;
+    }
+
+    public get contextValue(): string {
+        if (this.name === 'default') {
+            return 'defaultContext';
+        } else if (this.current) {
+            return 'currentCustomContext';
+        }
+
+        return 'customContext';
     }
 
     public get createdTime(): number {
