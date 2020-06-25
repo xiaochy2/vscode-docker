@@ -120,7 +120,6 @@ export class DockerContextManager implements ContextManager, Disposable {
     }
 
     private async loadContexts(): Promise<DockerContext[]> {
-        // TODO: handle settings, env var, telemetry
         return callWithTelemetryAndErrorHandling(ext.dockerClient ? 'docker-context.change' : 'docker-context.initialize', async (actionContext: IActionContext) => {
             try {
                 // docker-context.initialize and docker-context.change should be treated as "activation events", in that they aren't real user action
@@ -135,8 +134,9 @@ export class DockerContextManager implements ContextManager, Disposable {
                 } else if ((dockerHost = process.env.DOCKER_HOST)) { // Assignment + check is intentional
                     actionContext.telemetry.properties.hostSource = 'env';
                 } else if (!(await fse.pathExists(dockerContextsFolder)) || (await fse.readdir(dockerContextsFolder)).length === 0) {
+                    // If there's nothing inside ~/.docker/contexts/meta, then there's only the default, unmodifiable DOCKER_HOST-based context
+                    // It is unnecessary to call `docker context inspect`
                     actionContext.telemetry.properties.hostSource = 'defaultContextOnly';
-
                     dockerHost = os.platform() === 'win32' ? WindowsLocalPipe : UnixLocalPipe;
                 } else {
                     dockerHost = undefined;
