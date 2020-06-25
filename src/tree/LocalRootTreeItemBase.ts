@@ -8,6 +8,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, GenericTreeItem, IActi
 import { showDockerInstallNotification } from "../commands/dockerInstaller";
 import { configPrefix } from "../constants";
 import { DockerObject } from "../docker/Common";
+import { NotSupportedError } from "../docker/NotSupportedError";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 import { dockerInstallStatusProvider } from "../utils/DockerInstallStatusProvider";
@@ -323,6 +324,10 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
     }
 
     private getDockerErrorTreeItems(context: IActionContext, error: IParsedError, dockerInstalled: boolean): AzExtTreeItem[] {
+        if (error.errorType === NotSupportedError.ErrorType) {
+            return [new GenericTreeItem(this, { label: localize('vscode-docker.tree.contextNotSupported', 'This view is not supported in the current Docker context.'), contextValue: 'contextNotSupported' })];
+        }
+
         const result: AzExtTreeItem[] = dockerInstalled
             ? [
                 new GenericTreeItem(this, { label: localize('vscode-docker.tree.dockerNotRunning', 'Failed to connect. Is Docker running?'), contextValue: 'dockerConnectionError', iconPath: getThemedIconPath('statusWarning') }),
