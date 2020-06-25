@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import { URL } from 'url';
 import { Event, EventEmitter, workspace } from 'vscode';
 import { Disposable } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
@@ -30,8 +31,10 @@ const ContextCmdExecOptions: ExecOptions = { timeout: 5000 }
 const dockerConfigFile = path.join(os.homedir(), '.docker', 'config.json');
 const dockerContextsFolder = path.join(os.homedir(), '.docker', 'contexts', 'meta');
 
+const WindowsLocalPipe = 'npipe:////./pipe/docker_engine';
+const UnixLocalPipe = 'unix:///var/run/docker.sock';
+
 const defaultContext: Partial<DockerContext> = {
-    Id: 'default',
     Name: 'default',
     Description: 'Current DOCKER_HOST based configuration',
     CreatedTime: undefined, // Not defined for contexts
@@ -125,21 +128,20 @@ export class DockerContextManager implements ContextManager, Disposable {
             let dockerHost: string | undefined;
             const config = workspace.getConfiguration('docker');
             if ((dockerHost = config.get('host'))) { // Assignment + check is intentional
-                // TODO: telemetry
+                actionContext.telemetry.properties.hostSource = 'docker.host';
             } else if ((dockerHost = process.env.DOCKER_HOST)) { // Assignment + check is intentional
-                // TODO: telemetry
+                actionContext.telemetry.properties.hostSource = 'env';
             } else if (!(await fse.pathExists(dockerContextsFolder)) || (await fse.readdir(dockerContextsFolder)).length === 0) {
-                // If there's nothing inside ~/.docker/contexts/meta, then there's only the default, unmodifiable DOCKER_HOST-based context
-                // It is unnecessary to call `docker context inspect`
-                // TODO: telemetry
+                actionContext.telemetry.properties.hostSource = 'defaultContextOnly';
 
-                // dockerHost can be set to an empty string and returned, Dockerode will handle it correctly
-
+                dockerHost = os.platform() === 'win32' ? WindowsLocalPipe : UnixLocalPipe;
             } else {
                 dockerHost = undefined;
             }
 
-            if (dockerHost) {
+            if (dockerHost !== undefined) {
+                actionContext.telemetry.properties.hostProtocol = new URL(dockerHost).protocol;
+
                 return [{
                     ...defaultContext,
                     Current: true,
@@ -148,7 +150,6 @@ export class DockerContextManager implements ContextManager, Disposable {
             }
 
             // No value for DOCKER_HOST, and multiple contexts exist, so check them
-            // TODO: telemetry
             const result: DockerContext[] = [];
             const { stdout } = await execAsync('docker context ls --format="{{json .}}"', { timeout: 10000 });
             const lines = LineSplitter.splitLines(stdout);
@@ -156,6 +157,16 @@ export class DockerContextManager implements ContextManager, Disposable {
             for (const line of lines) {
                 result.push(JSON.parse(line) as DockerContext);
             }
+
+            const currentContext = result.find(c => c.Current);
+
+            if (currentContext.Name === 'default') {
+                actionContext.telemetry.properties.hostSource = 'defaultContextSelected';
+            } else {
+                actionContext.telemetry.properties.hostSource = 'customContextSelected'
+            }
+
+            actionContext.telemetry.properties.hostProtocol = new URL(currentContext.DockerEndpoint).protocol;
 
             return result;
         });

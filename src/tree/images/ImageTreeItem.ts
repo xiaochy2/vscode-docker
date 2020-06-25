@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azure
 import { DockerImage } from '../../docker/Images';
 import { ext } from '../../extensionVariables';
 import { getThemedIconPath, IconPath } from '../IconPath';
+import { getTreeId } from "../LocalRootTreeItemBase";
 
 export class ImageTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'image';
@@ -19,7 +20,7 @@ export class ImageTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return `${this.fullTag}${this.imageId}`;
+        return getTreeId(this._item);
     }
 
     public get createdTime(): number {

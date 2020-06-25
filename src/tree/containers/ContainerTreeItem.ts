@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azure
 import { DockerContainer } from "../../docker/Containers";
 import { ext } from "../../extensionVariables";
 import { getThemedIconPath, IconPath } from '../IconPath';
+import { getTreeId } from "../LocalRootTreeItemBase";
 import { getContainerStateIcon } from "./ContainerProperties";
 
 export class ContainerTreeItem extends AzExtTreeItem {
@@ -20,7 +21,7 @@ export class ContainerTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return `${this.containerId}${this._item.State}`;
+        return getTreeId(this._item);
     }
 
     public get createdTime(): number {

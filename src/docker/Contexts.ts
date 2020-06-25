@@ -9,6 +9,9 @@ export interface DockerContext extends DockerObject {
     readonly Description?: string;
     readonly DockerEndpoint: string;
     readonly Current: boolean;
+
+    readonly Id: undefined; // Not defined for contexts
+    readonly CreatedTime: undefined; // Not defined for contexts
 }
 
 export interface DockerContextInspection {

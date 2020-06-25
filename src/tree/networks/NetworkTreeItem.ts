@@ -8,6 +8,7 @@ import { builtInNetworks } from "../../constants";
 import { DockerNetwork } from "../../docker/Networks";
 import { ext } from "../../extensionVariables";
 import { getThemedIconPath, IconPath } from '../IconPath';
+import { getTreeId } from "../LocalRootTreeItemBase";
 
 export class NetworkTreeItem extends AzExtTreeItem {
     public static allContextRegExp: RegExp = /Network$/;
@@ -25,7 +26,7 @@ export class NetworkTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this.networkId;
+        return getTreeId(this._item);
     }
 
     public get networkId(): string {

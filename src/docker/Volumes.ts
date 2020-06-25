@@ -9,8 +9,12 @@ export type VolumeDriverType = string;
 
 export interface DockerVolume extends DockerObject {
     readonly Driver: VolumeDriverType;
+
+    readonly Id: undefined; // Not defined for volumes
 }
 
 export interface DockerVolumeInspection extends DockerObject {
     readonly Driver: VolumeDriverType;
+
+    readonly Id: undefined; // Not defined for volumes
 }

@@ -11,4 +11,6 @@ export interface DockerImageInspection extends DockerObject {
     readonly Config?: {
         readonly ExposedPorts?: { readonly [portAndProtocol: string]: unknown; };
     };
+
+    readonly Name: undefined; // Not defined for inspection
 }

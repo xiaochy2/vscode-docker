@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azure
 import { DockerContext, DockerContextInspection } from "../../docker/Contexts";
 import { ext } from "../../extensionVariables";
 import { getThemedIconPath, IconPath } from '../IconPath';
+import { getTreeId } from "../LocalRootTreeItemBase";
 
 export class ContextTreeItem extends AzExtTreeItem {
     public static allContextRegExp: RegExp = /Context$/;
@@ -34,7 +35,7 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this.name;
+        return getTreeId(this._item);
     }
 
     public get label(): string {

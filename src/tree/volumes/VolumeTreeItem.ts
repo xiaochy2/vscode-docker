@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azure
 import { DockerVolume } from "../../docker/Volumes";
 import { ext } from "../../extensionVariables";
 import { getThemedIconPath, IconPath } from "../IconPath";
+import { getTreeId } from "../LocalRootTreeItemBase";
 
 export class VolumeTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'volume';
@@ -19,7 +20,7 @@ export class VolumeTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this.volumeName;
+        return getTreeId(this._item);
     }
 
     public get createdTime(): number {

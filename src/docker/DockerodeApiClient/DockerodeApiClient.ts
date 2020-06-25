@@ -24,7 +24,6 @@ import { refreshDockerode } from './refreshDockerode';
 const dockerodeCallTimeout = 20 * 1000;
 
 export class DockerodeApiClient implements DockerApiClient {
-    private contextChangingPromise: Promise<void> | undefined;
     private contextChangeCps: CancellationPromiseSource;
     private dockerodeClient: Dockerode;
     private readonly contextChangedDisposable: Disposable;
@@ -32,19 +31,12 @@ export class DockerodeApiClient implements DockerApiClient {
     public constructor(private readonly contextManager: ContextManager) {
         this.contextChangeCps = new CancellationPromiseSource();
 
-        this.contextChangedDisposable = this.contextManager.onContextChanged(async (currentContext: DockerContext) => {
+        this.contextChangedDisposable = this.contextManager.onContextChanged((currentContext: DockerContext) => {
             this.contextChangeCps.cancel();
             this.contextChangeCps.dispose();
             this.contextChangeCps = new CancellationPromiseSource();
 
-            this.contextChangingPromise = refreshDockerode(currentContext).then(
-                (dockerodeClient) => {
-                    this.dockerodeClient = dockerodeClient;
-                }
-            );
-
-            await this.contextChangingPromise;
-            this.contextChangingPromise = undefined;
+            this.dockerodeClient = refreshDockerode(currentContext);
         });
     }
 
@@ -200,7 +192,6 @@ export class DockerodeApiClient implements DockerApiClient {
             ...result,
             // eslint-disable-next-line @typescript-eslint/tslint/config
             CreatedTime: new Date(result.Created).valueOf(),
-            Name: undefined, // Not needed on inspect info
         };
     }
 
@@ -266,10 +257,6 @@ export class DockerodeApiClient implements DockerApiClient {
         });
 
         try {
-            if (this.contextChangingPromise) {
-                await this.contextChangingPromise;
-            }
-
             const promises: Promise<T>[] = [tps.promise, this.contextChangeCps.promise, callback()];
 
             if (token) {

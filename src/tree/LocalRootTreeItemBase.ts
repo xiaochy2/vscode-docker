@@ -228,7 +228,7 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
                     const [group] = itemOrGroup;
                     return group;
                 } else {
-                    return itemOrGroup.treeId;
+                    return getTreeId(itemOrGroup);
                 }
             }
         );
@@ -343,7 +343,7 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
     private async getSortedItems(context: IActionContext): Promise<TItem[]> {
         if (ext.treeInitError === undefined) {
             const items: TItem[] = await this.getItems(context) || [];
-            return items.sort((a, b) => a.treeId.localeCompare(b.treeId));
+            return items.sort((a, b) => getTreeId(a).localeCompare(getTreeId(b)));
         } else {
             throw ext.treeInitError;
         }
@@ -375,7 +375,7 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
                 return false;
             } else {
                 return !array1.some((item1, index) => {
-                    return item1.treeId !== array2[index].treeId;
+                    return getTreeId(item1) !== getTreeId(array2[index]);
                 });
             }
         } else {
@@ -390,4 +390,11 @@ export abstract class LocalRootTreeItemBase<TItem extends DockerObject, TPropert
             showDockerInstallNotification();
         }
     }
+}
+
+export function getTreeId(object: DockerObject): string {
+    // Id and State aren't defined for all Docker objects, but the concatenation of whatever exists of the three of these is enough to always be unique
+    // *and* change the ID when the state of the object changes
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return `${object.Id}${object.Name}${(object as any).State}`;
 }
