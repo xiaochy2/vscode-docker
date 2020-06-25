@@ -6,6 +6,7 @@
 import * as osNode from 'os';
 import { ExtensionContext, TreeView } from "vscode";
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel, IAzureUserInput } from "vscode-azureextensionui";
+import { ContextManager } from './docker/ContextManager';
 import { DockerApiClient } from './docker/DockerApiClient';
 import { IActivityMeasurementService } from './telemetry/ActivityMeasurementService';
 import { IExperimentationServiceAdapter } from './telemetry/ExperimentationServiceAdapter';
@@ -33,6 +34,7 @@ export namespace ext {
 
     export let terminalProvider: ITerminalProvider;
     export let keytar: IKeytar | undefined;
+    export let dockerContextManager: ContextManager;
     export let dockerClient: DockerApiClient;
     export let treeInitError: unknown;
     export const ignoreBundle = !/^(false|0)?$/i.test(process.env.AZCODE_DOCKER_IGNORE_BUNDLE || '');

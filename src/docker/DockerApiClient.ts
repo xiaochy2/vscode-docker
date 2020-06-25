@@ -7,7 +7,6 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
 import { DockerInfo, PruneResult } from './Common';
 import { DockerContainer, DockerContainerInspection } from './Containers';
-import { DockerContext } from './Contexts';
 import { DockerImage, DockerImageInspection } from './Images';
 import { DockerNetwork, DockerNetworkInspection, DriverType } from './Networks';
 import { DockerVolume, DockerVolumeInspection } from './Volumes';
@@ -40,6 +39,4 @@ export interface DockerApiClient {
     inspectVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerVolumeInspection>;
     pruneVolumes(context: IActionContext, token?: CancellationToken): Promise<PruneResult | undefined>;
     removeVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<void>;
-
-    getContexts(context: IActionContext, token?: CancellationToken): Promise<DockerContext[]>;
 }

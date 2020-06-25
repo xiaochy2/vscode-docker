@@ -31,11 +31,11 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public get createdTime(): number {
-        return this._item.CreatedTime;
+        return undefined;
     }
 
     public get id(): string {
-        return this._item.treeId;
+        return this.name;
     }
 
     public get label(): string {
@@ -53,11 +53,11 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public get current(): boolean {
-        return this._item.current;
+        return this._item.Current;
     }
 
     public get iconPath(): IconPath {
-        if (this._item.current) {
+        if (this._item.Current) {
             return getThemedIconPath('connect');
         }
     }

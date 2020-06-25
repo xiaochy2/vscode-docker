@@ -19,7 +19,7 @@ export class VolumeTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this._item.treeId;
+        return this.volumeName;
     }
 
     public get createdTime(): number {

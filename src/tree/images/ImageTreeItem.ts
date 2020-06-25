@@ -19,7 +19,7 @@ export class ImageTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this._item.treeId;
+        return `${this.fullTag}${this.imageId}`;
     }
 
     public get createdTime(): number {

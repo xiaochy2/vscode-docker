@@ -9,7 +9,7 @@ import { DockerContext } from '../../docker/Contexts';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { descriptionKey, labelKey, LocalChildGroupType, LocalChildType, LocalRootTreeItemBase } from "../LocalRootTreeItemBase";
-import { CommonGroupBy, getCommonPropertyValue, groupByNoneProperty } from "../settings/CommonProperties";
+import { CommonGroupBy, groupByNoneProperty } from "../settings/CommonProperties";
 import { ITreeArraySettingInfo, ITreeSettingInfo } from "../settings/ITreeSettingInfo";
 import { ITreeSettingWizardInfo } from '../settings/ITreeSettingsWizardContext';
 import { ContextGroupTreeItem } from './ContextGroupTreeItem';
@@ -43,7 +43,7 @@ export class ContextsTreeItem extends LocalRootTreeItemBase<DockerContext, Conte
     }
 
     public async getItems(context: IActionContext): Promise<DockerContext[]> {
-        return ext.dockerClient.getContexts(context);
+        return ext.dockerContextManager.getContexts();
     }
 
     public getPropertyValue(item: DockerContext, property: ContextProperty): string {
@@ -51,11 +51,11 @@ export class ContextsTreeItem extends LocalRootTreeItemBase<DockerContext, Conte
             case 'Name':
                 return item.Name;
             case 'Description':
-                return item.description;
+                return item.Description;
             case 'DockerEndpoint':
-                return item.dockerEndpoint;
+                return item.DockerEndpoint;
             default:
-                return getCommonPropertyValue(item, property);
+                return '';
         }
     }
 

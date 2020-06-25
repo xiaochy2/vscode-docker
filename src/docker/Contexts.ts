@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// TODO: better
-export interface DockerContext {
-    readonly Name: string;
-    readonly Description: string;
+import { DockerObject } from './Common';
+
+export interface DockerContext extends DockerObject {
+    readonly Description?: string;
     readonly DockerEndpoint: string;
     readonly Current: boolean;
 }

@@ -15,9 +15,7 @@ import { LegacyDockerDebugConfigProvider } from './configureWorkspace/LegacyDock
 import { COMPOSE_FILE_GLOB_PATTERN } from './constants';
 import { registerDebugConfigurationProvider } from './debugging/coreclr/registerDebugConfigurationProvider';
 import { registerDebugProvider } from './debugging/DebugHelper';
-import { contextManager } from './docker/ContextManager';
-import { DockerodeApiClient } from './docker/DockerodeApiClient/DockerodeApiClient';
-import { refreshDockerode } from './docker/DockerodeApiClient/refreshDockerode';
+import { contextManager, DockerContextManager2 } from './docker/ContextManager';
 import { DockerComposeCompletionItemProvider } from './dockerCompose/dockerComposeCompletionItemProvider';
 import { DockerComposeHoverProvider } from './dockerCompose/dockerComposeHoverProvider';
 import composeVersionKeys from './dockerCompose/dockerComposeKeyInfo';
@@ -122,10 +120,8 @@ export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: 
             )
         );
 
-        // TODO: smartly multiplex depending on context
-        const dockerClient = new DockerodeApiClient(async () => refreshDockerode(), contextManager);
-        ctx.subscriptions.push(dockerClient);
-        ext.dockerClient = dockerClient;
+        ext.dockerContextManager = new DockerContextManager2();
+        await ext.dockerContextManager.refresh();
 
         registerTrees();
         registerCommands();

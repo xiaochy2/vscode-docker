@@ -25,7 +25,7 @@ export class NetworkTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this._item.treeId;
+        return this.networkId;
     }
 
     public get networkId(): string {

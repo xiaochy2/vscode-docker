@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
-import { DockerContainer, NonComposeGroupName } from "../../docker/Containers";
+import { DockerContainer } from "../../docker/Containers";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { getThemedIconPath } from "../IconPath";
@@ -76,7 +76,7 @@ export class ContainersTreeItem extends LocalRootTreeItemBase<DockerContainer, C
             case 'Status':
                 return item.Status;
             case 'Compose Project Name':
-                return item.composeProjectName;
+                return getComposeProjectName(item);
             default:
                 return getImagePropertyValue({ ...item, Name: item.Image }, property);
         }
@@ -118,5 +118,19 @@ export class ContainersTreeItem extends LocalRootTreeItemBase<DockerContainer, C
             this.newContainerUser = false;
             await ext.context.globalState.update('vscode-docker.container.newContainerUser', false);
         }
+    }
+}
+
+const NonComposeGroupName = localize('vscode-docker.tree.containers.otherContainers', 'Other Containers');
+
+function getComposeProjectName(container: DockerContainer): string {
+    const labels = Object.keys(container.Labels)
+        .map(label => ({ label: label, value: container.Labels[label] }));
+
+    const composeProject = labels.find(l => l.label === 'com.docker.compose.project');
+    if (composeProject) {
+        return composeProject.value;
+    } else {
+        return NonComposeGroupName;
     }
 }

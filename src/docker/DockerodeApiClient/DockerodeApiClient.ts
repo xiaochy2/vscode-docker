@@ -18,7 +18,8 @@ import { DockerImage, DockerImageInspection } from '../Images';
 import { DockerNetwork, DockerNetworkInspection, DriverType } from '../Networks';
 import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
-import { getComposeProjectName, getContainerName, getFullTagFromDigest } from './DockerodeUtils';
+import { getContainerName, getFullTagFromDigest } from './DockerodeUtils';
+import { refreshDockerode } from './refreshDockerode';
 
 // 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
 const dockerodeCallTimeout = 20 * 1000;
@@ -29,15 +30,19 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
     private dockerodeClient: Dockerode;
     private readonly contextChangedDisposable: Disposable;
 
-    public constructor(dockerodeClientPromiseCallback: () => Promise<Dockerode>, private readonly contextManager: ContextManager) {
+    public constructor(private readonly contextManager: ContextManager) {
         this.contextChangeCps = new CancellationPromiseSource();
-        this.contextChangingPromise = this.load(dockerodeClientPromiseCallback);
 
-        this.contextChangedDisposable = this.contextManager.onContextChanged(async () => {
+        this.contextChangedDisposable = this.contextManager.onContextChanged(async (currentContext: DockerContext) => {
             this.contextChangeCps.cancel();
             this.contextChangeCps = new CancellationPromiseSource();
 
-            this.contextChangingPromise = this.load(dockerodeClientPromiseCallback);
+            this.contextChangingPromise = refreshDockerode(currentContext).then(
+                (dockerodeClient) => {
+                    this.dockerodeClient = dockerodeClient;
+                }
+            );
+
             await this.contextChangingPromise;
             this.contextChangingPromise = undefined;
         });
@@ -57,11 +62,9 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
         return result.map(ci => {
             return {
                 ...ci,
-                composeProjectName: getComposeProjectName(ci),
                 Name: getContainerName(ci),
                 CreatedTime: ci.Created * 1000,
                 State: ci.State as ContainerState,
-                treeId: `${ci.Id}${ci.State}`,
             }
         });
     }
@@ -73,9 +76,7 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
         return {
             ...result,
             CreatedTime: new Date(result.Created).valueOf(),
-            treeId: undefined, // Not needed on inspect info
-        }
-
+        };
     }
 
     public async getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<NodeJS.ReadableStream> {
@@ -123,7 +124,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
                     ...image,
                     Name: fullTag,
                     CreatedTime: image.Created * 1000,
-                    treeId: `${fullTag}${image.Id}`,
                 });
             } else {
                 for (const fullTag of image.RepoTags) {
@@ -131,7 +131,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
                         ...image,
                         Name: fullTag,
                         CreatedTime: image.Created * 1000,
-                        treeId: `${fullTag}${image.Id}`,
                     });
                 }
             }
@@ -147,7 +146,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
         return {
             ...result,
             CreatedTime: new Date(result.Created).valueOf(),
-            treeId: undefined, // Not needed on inspect info
             Name: undefined, // Not needed on inspect info
         };
     }
@@ -186,10 +184,8 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
         return result.map(ni => {
             return {
                 ...ni,
-                /* eslint-disable @typescript-eslint/tslint/config */
+                // eslint-disable-next-line @typescript-eslint/tslint/config
                 CreatedTime: new Date(ni.Created).valueOf(),
-                treeId: ni.Id,
-                /* eslint-enable @typescript-eslint/tslint/config */
             }
         });
     }
@@ -202,7 +198,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
             ...result,
             // eslint-disable-next-line @typescript-eslint/tslint/config
             CreatedTime: new Date(result.Created).valueOf(),
-            treeId: undefined, // Not needed on inspect info
             Name: undefined, // Not needed on inspect info
         };
     }
@@ -233,7 +228,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
                 // eslint-disable-next-line @typescript-eslint/tslint/config, @typescript-eslint/no-explicit-any
                 CreatedTime: new Date((vi as any).CreatedAt).valueOf(),
                 Id: undefined, // Not defined for volumes
-                treeId: vi.Name,
             }
         });
     }
@@ -247,7 +241,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
             // eslint-disable-next-line @typescript-eslint/tslint/config, @typescript-eslint/no-explicit-any
             CreatedTime: new Date((result as any).CreatedAt).valueOf(),
             Id: undefined, // Not defined for volumes
-            treeId: undefined, // Not needed on inspect info
         };
     }
 
@@ -304,9 +297,5 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
             evt.dispose();
             tps.dispose();
         }
-    }
-
-    private async load(dockerodeClientCallback: () => Promise<Dockerode>): Promise<void> {
-        this.dockerodeClient = await dockerodeClientCallback();
     }
 }

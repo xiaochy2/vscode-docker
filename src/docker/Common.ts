@@ -18,7 +18,4 @@ export interface DockerObject {
     readonly Id: string;
     readonly Name: string;
     readonly CreatedTime: number;
-
-    // For the tree view
-    readonly treeId: string | undefined;
 }

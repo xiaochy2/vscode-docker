@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../localize';
 import { DockerObject } from './Common';
 
-export type ContainerState = 'stopped' | 'running' | 'paused' | 'starting' | 'exited';
+export type ContainerState = 'stopped' | 'running' | 'paused' | 'starting' | 'exited' | 'created';
 
 export interface DockerContainer extends DockerObject {
     readonly State: ContainerState;
@@ -17,10 +16,14 @@ export interface DockerContainer extends DockerObject {
         readonly Networks?: { readonly [key: string]: unknown };
     };
     readonly Ports?: {
+        readonly IP?: string;
+        readonly PrivatePort?: number;
         readonly PublicPort?: number;
+        readonly Type?: string;
     }[];
-
-    readonly composeProjectName: string;
+    readonly Labels?: {
+        readonly [key: string]: string;
+    }
 }
 
 export interface DockerContainerInspection extends DockerObject {
@@ -36,5 +39,3 @@ export interface DockerContainerInspection extends DockerObject {
         };
     };
 }
-
-export const NonComposeGroupName = localize('vscode-docker.tree.containers.otherContainers', 'Other Containers');

@@ -20,7 +20,7 @@ export class ContainerTreeItem extends AzExtTreeItem {
     }
 
     public get id(): string {
-        return this._item.treeId;
+        return `${this.containerId}${this._item.State}`;
     }
 
     public get createdTime(): number {

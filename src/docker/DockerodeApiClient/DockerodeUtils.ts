@@ -4,19 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import Dockerode = require('dockerode');
-import { NonComposeGroupName } from '../Containers';
-
-export function getComposeProjectName(containerInfo: Dockerode.ContainerInfo): string {
-    const labels = Object.keys(containerInfo.Labels)
-        .map(label => ({ label: label, value: containerInfo.Labels[label] }));
-
-    const composeProject = labels.find(l => l.label === 'com.docker.compose.project');
-    if (composeProject) {
-        return composeProject.value;
-    } else {
-        return NonComposeGroupName;
-    }
-}
 
 export function getFullTagFromDigest(image: Dockerode.ImageInfo): string {
     let repo = '<none>';
