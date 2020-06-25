@@ -15,7 +15,7 @@ import { LegacyDockerDebugConfigProvider } from './configureWorkspace/LegacyDock
 import { COMPOSE_FILE_GLOB_PATTERN } from './constants';
 import { registerDebugConfigurationProvider } from './debugging/coreclr/registerDebugConfigurationProvider';
 import { registerDebugProvider } from './debugging/DebugHelper';
-import { contextManager, DockerContextManager2 } from './docker/ContextManager';
+import { DockerContextManager } from './docker/ContextManager';
 import { DockerComposeCompletionItemProvider } from './dockerCompose/dockerComposeCompletionItemProvider';
 import { DockerComposeHoverProvider } from './dockerCompose/dockerComposeHoverProvider';
 import composeVersionKeys from './dockerCompose/dockerComposeKeyInfo';
@@ -120,7 +120,7 @@ export async function activateInternal(ctx: vscode.ExtensionContext, perfStats: 
             )
         );
 
-        ext.dockerContextManager = new DockerContextManager2();
+        ctx.subscriptions.push(ext.dockerContextManager = new DockerContextManager());
         await ext.dockerContextManager.refresh();
 
         registerTrees();
@@ -229,7 +229,7 @@ namespace Configuration {
                     e.affectsConfiguration('docker.tlsVerify') ||
                     e.affectsConfiguration('docker.machineName') ||
                     e.affectsConfiguration('docker.dockerodeOptions')) {
-                    await contextManager.refresh();
+                    await ext.dockerContextManager.refresh();
                 }
             }
         ));

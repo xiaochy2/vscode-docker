@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Disposable } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
 import { DockerInfo, PruneResult } from './Common';
@@ -11,7 +12,7 @@ import { DockerImage, DockerImageInspection } from './Images';
 import { DockerNetwork, DockerNetworkInspection, DriverType } from './Networks';
 import { DockerVolume, DockerVolumeInspection } from './Volumes';
 
-export interface DockerApiClient {
+export interface DockerApiClient extends Disposable {
     info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo>;
 
     getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]>;

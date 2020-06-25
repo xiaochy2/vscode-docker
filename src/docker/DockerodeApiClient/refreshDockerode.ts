@@ -13,7 +13,6 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { addDockerSettingsToEnv } from '../../utils/addDockerSettingsToEnv';
 import { cloneObject } from '../../utils/cloneObject';
-import { dockerContextManager, IDockerContext } from '../../utils/dockerContextManager';
 import { isWindows } from '../../utils/osUtils';
 import { TimeoutPromiseSource } from '../../utils/promiseUtils';
 import { timeUtils } from '../../utils/timeUtils';

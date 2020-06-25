@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken, Disposable } from 'vscode';
+import { CancellationToken } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { DockerInfo, PruneResult } from '../Common';
 import { DockerContainer, DockerContainerInspection } from '../Containers';
@@ -13,7 +13,7 @@ import { DockerNetwork, DockerNetworkInspection, DriverType } from '../Networks'
 import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
 
-export class DockerServeClient implements DockerApiClient, Disposable {
+export class DockerServeClient implements DockerApiClient {
     public dispose(): void {
     }
 

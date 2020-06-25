@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { workspace, WorkspaceConfiguration } from 'vscode';
 import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { DockerContext } from '../../docker/Contexts';
 import { ext } from '../../extensionVariables';
@@ -80,10 +79,5 @@ export class ContextsTreeItem extends LocalRootTreeItemBase<DockerContext, Conte
                 settingInfo: this.descriptionSettingInfo
             }
         ]
-    }
-
-    protected getRefreshInterval(): number {
-        const configOptions: WorkspaceConfiguration = workspace.getConfiguration('docker');
-        return configOptions.get<number>('explorerContextsRefreshInterval', 20) * 1000;
     }
 }

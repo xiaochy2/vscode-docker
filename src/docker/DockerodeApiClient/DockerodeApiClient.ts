@@ -16,7 +16,6 @@ import { DockerContext } from '../Contexts';
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
 import { DockerNetwork, DockerNetworkInspection, DriverType } from '../Networks';
-import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
 import { getContainerName, getFullTagFromDigest } from './DockerodeUtils';
 import { refreshDockerode } from './refreshDockerode';
@@ -24,7 +23,7 @@ import { refreshDockerode } from './refreshDockerode';
 // 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
 const dockerodeCallTimeout = 20 * 1000;
 
-export class DockerodeApiClient implements DockerApiClient, Disposable {
+export class DockerodeApiClient implements DockerApiClient {
     private contextChangingPromise: Promise<void> | undefined;
     private contextChangeCps: CancellationPromiseSource;
     private dockerodeClient: Dockerode;
@@ -35,6 +34,7 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
 
         this.contextChangedDisposable = this.contextManager.onContextChanged(async (currentContext: DockerContext) => {
             this.contextChangeCps.cancel();
+            this.contextChangeCps.dispose();
             this.contextChangeCps = new CancellationPromiseSource();
 
             this.contextChangingPromise = refreshDockerode(currentContext).then(
@@ -50,6 +50,8 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
 
     public dispose(): void {
         this.contextChangedDisposable.dispose();
+        this.contextChangeCps.cancel();
+        this.contextChangeCps.dispose();
     }
 
     public async info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo> {
@@ -255,10 +257,6 @@ export class DockerodeApiClient implements DockerApiClient, Disposable {
     public async removeVolume(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const volume = this.dockerodeClient.getVolume(ref);
         return this.callWithErrorHandling(context, async () => volume.remove({ force: true }), token);
-    }
-
-    public async getContexts(context: IActionContext, token?: CancellationToken): Promise<DockerContext[]> {
-        throw new NotSupportedError();
     }
 
     private async callWithErrorHandling<T>(context: IActionContext, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {

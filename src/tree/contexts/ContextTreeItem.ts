@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
-import { DockerContext } from "../../docker/Contexts";
+import { DockerContext, DockerContextInspection } from "../../docker/Contexts";
 import { ext } from "../../extensionVariables";
-import { dockerContextManager } from "../../utils/dockerContextManager";
 import { getThemedIconPath, IconPath } from '../IconPath';
 
 export class ContextTreeItem extends AzExtTreeItem {
@@ -63,14 +62,14 @@ export class ContextTreeItem extends AzExtTreeItem {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        return dockerContextManager.remove(this.name);
+        return ext.dockerContextManager.remove(context, this.name);
     }
 
-    public async inspect(context: IActionContext): Promise<string> {
-        return dockerContextManager.inspect(this.name)
+    public async inspect(context: IActionContext): Promise<DockerContextInspection> {
+        return ext.dockerContextManager.inspect(context, this.name);
     }
 
     public async use(context: IActionContext): Promise<void> {
-        return dockerContextManager.use(this.name);
+        return ext.dockerContextManager.use(context, this.name);
     }
 }
