@@ -107,7 +107,7 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     public async getImages(context: IActionContext, token?: CancellationToken): Promise<DockerImage[]> {
-        const images = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listImages({ filters: { dangling: false } }), token);
+        const images = await this.callWithErrorHandling(context, async () => this.dockerodeClient.listImages({ filters: { "dangling": ["false"] } }), token);
         const result: DockerImage[] = [];
 
         for (const image of images) {

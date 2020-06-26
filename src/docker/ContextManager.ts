@@ -81,15 +81,15 @@ export class DockerContextManager implements ContextManager, Disposable {
         const currentContext = contexts.find(c => c.Current);
 
         if (currentContext.DockerEndpoint === 'aci') {
-            if (ext.dockerClient instanceof DockerodeApiClient) {
+            if (ext.dockerClient instanceof DockerodeApiClient || ext.dockerClient === undefined) {
                 // Need to switch modes to the new SDK client
-                ext.dockerClient.dispose();
+                void ext.dockerClient?.dispose();
                 ext.dockerClient = new DockerServeClient();
             }
         } else {
-            if (ext.dockerClient instanceof DockerServeClient) {
+            if (ext.dockerClient instanceof DockerServeClient || ext.dockerClient === undefined) {
                 // Need to switch modes to the Dockerode client
-                ext.dockerClient.dispose();
+                void ext.dockerClient?.dispose();
                 ext.dockerClient = new DockerodeApiClient(this);
             }
         }
