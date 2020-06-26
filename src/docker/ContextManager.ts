@@ -50,6 +50,8 @@ export interface ContextManager {
     remove(actionContext: IActionContext, contextName: string): Promise<void>;
 }
 
+// TODO: consider a periodic refresh as a catch-all; but make sure it compares old data to new before firing a change event
+// TODO: so that non-changes don't result in everything getting refreshed
 export class DockerContextManager implements ContextManager, Disposable {
     private readonly emitter: EventEmitter<DockerContext> = new EventEmitter<DockerContext>();
     private readonly contextsCache: AsyncLazy<DockerContext[]>;
