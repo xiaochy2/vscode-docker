@@ -62,10 +62,10 @@ export class DockerContextManager implements ContextManager, Disposable {
     public constructor() {
         this.contextsCache = new AsyncLazy(async () => this.loadContexts());
 
-        // eslint-disable-next-line @typescript-eslint/tslint/config
+        /* eslint-disable @typescript-eslint/tslint/config */
         this.configFileWatcher = fs.watch(dockerConfigFile, async () => this.refresh());
-        // eslint-disable-next-line @typescript-eslint/tslint/config
         this.contextFolderWatcher = fs.watch(dockerContextsFolder, async () => this.refresh());
+        /* eslint-enable @typescript-eslint/tslint/config */
     }
 
     public dispose(): void {
@@ -79,10 +79,11 @@ export class DockerContextManager implements ContextManager, Disposable {
     }
 
     public async refresh(): Promise<void> {
+        if (this.refreshing) {
+            return;
+        }
+
         try {
-            if (this.refreshing) {
-                return;
-            }
             this.refreshing = true;
 
             this.contextsCache.clear();
