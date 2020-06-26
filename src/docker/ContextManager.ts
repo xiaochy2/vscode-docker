@@ -53,22 +53,23 @@ export interface ContextManager {
 export class DockerContextManager implements ContextManager, Disposable {
     private readonly emitter: EventEmitter<DockerContext> = new EventEmitter<DockerContext>();
     private readonly contextsCache: AsyncLazy<DockerContext[]>;
-    private readonly watcherCallback: () => Promise<void>;
+    private readonly configFileWatcher: fs.FSWatcher;
+    private readonly contextFolderWatcher: fs.FSWatcher;
+    private refreshing: boolean = false;
 
     public constructor() {
         this.contextsCache = new AsyncLazy(async () => this.loadContexts());
 
-        this.watcherCallback = async () => this.refresh();
         // eslint-disable-next-line @typescript-eslint/tslint/config
-        fs.watchFile(dockerConfigFile, this.watcherCallback);
+        this.configFileWatcher = fs.watch(dockerConfigFile, async () => this.refresh());
+        // eslint-disable-next-line @typescript-eslint/tslint/config
+        this.contextFolderWatcher = fs.watch(dockerContextsFolder, async () => this.refresh());
     }
 
     public dispose(): void {
-        // eslint-disable-next-line @typescript-eslint/tslint/config
-        fs.unwatchFile(dockerConfigFile, this.watcherCallback);
-
-        // eslint-disable-next-line no-unused-expressions
-        ext.dockerClient?.dispose();
+        void this.configFileWatcher?.close();
+        void this.contextFolderWatcher?.close();
+        void ext.dockerClient?.dispose();
     }
 
     public get onContextChanged(): Event<DockerContext> {
@@ -76,25 +77,34 @@ export class DockerContextManager implements ContextManager, Disposable {
     }
 
     public async refresh(): Promise<void> {
-        this.contextsCache.clear();
-        const contexts = await this.contextsCache.getValue();
-        const currentContext = contexts.find(c => c.Current);
+        try {
+            if (this.refreshing) {
+                return;
+            }
+            this.refreshing = true;
 
-        if (currentContext.DockerEndpoint === 'aci') {
-            if (ext.dockerClient instanceof DockerodeApiClient || ext.dockerClient === undefined) {
-                // Need to switch modes to the new SDK client
-                void ext.dockerClient?.dispose();
-                ext.dockerClient = new DockerServeClient();
+            this.contextsCache.clear();
+            const contexts = await this.contextsCache.getValue();
+            const currentContext = contexts.find(c => c.Current);
+
+            if (currentContext.DockerEndpoint === 'aci') {
+                if (ext.dockerClient instanceof DockerodeApiClient || ext.dockerClient === undefined) {
+                    // Need to switch modes to the new SDK client
+                    void ext.dockerClient?.dispose();
+                    ext.dockerClient = new DockerServeClient();
+                }
+            } else {
+                if (ext.dockerClient instanceof DockerServeClient || ext.dockerClient === undefined) {
+                    // Need to switch modes to the Dockerode client
+                    void ext.dockerClient?.dispose();
+                    ext.dockerClient = new DockerodeApiClient(this);
+                }
             }
-        } else {
-            if (ext.dockerClient instanceof DockerServeClient || ext.dockerClient === undefined) {
-                // Need to switch modes to the Dockerode client
-                void ext.dockerClient?.dispose();
-                ext.dockerClient = new DockerodeApiClient(this);
-            }
+
+            this.emitter.fire(currentContext);
+        } finally {
+            this.refreshing = false;
         }
-
-        this.emitter.fire(currentContext);
     }
 
     public async getContexts(): Promise<DockerContext[]> {
