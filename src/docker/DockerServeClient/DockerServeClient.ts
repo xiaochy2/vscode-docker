@@ -72,6 +72,7 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
         });
     }
 
+    // #region Not supported by the Docker SDK yet
     public async inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection> {
         throw new NotSupportedError(context);
     }
@@ -92,6 +93,7 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
     public async restartContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         throw new NotSupportedError(context);
     }
+    // #endregion Not supported by the Docker SDK yet
 
     public async stopContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
         const request = new StopRequest();
