@@ -18,7 +18,7 @@ import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
 
 // 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
-const dockerServeCallTiemout = 20 * 1000;
+const dockerServeCallTimeout = 20 * 1000;
 
 export class DockerServeClient extends ContextChangeCancelClient implements DockerApiClient {
     private readonly containersClient: ContainersClient;
@@ -38,7 +38,8 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
     }
 
     public async getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]> {
-        const result = await this.promisify(context, this.containersClient, this.containersClient.list, new ListRequest(), (response: ListResponse) => response.getContainersList(), token);
+        const response: ListResponse = await this.promisify(context, this.containersClient, this.containersClient.list, new ListRequest(), token);
+        const result = response.getContainersList();
 
         return result.map(c => {
             const container = c.toObject();
@@ -47,7 +48,7 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
                     IP: p.hostIp,
                     PublicPort: p.hostPort,
                     PrivatePort: p.containerPort,
-                    Type: p.protocol
+                    Type: p.protocol,
                 };
             });
 
@@ -97,7 +98,7 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
         request.setId(ref);
         request.setTimeout(5000);
 
-        return this.promisify(context, this.containersClient, this.containersClient.stop, request, () => { }, token);
+        await this.promisify(context, this.containersClient, this.containersClient.stop, request, token);
     }
 
     public async removeContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
@@ -105,7 +106,7 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
         request.setId(ref);
         request.setForce(true);
 
-        return this.promisify(context, this.containersClient, this.containersClient.delete, request, () => { }, token)
+        await this.promisify(context, this.containersClient, this.containersClient.delete, request, token)
     }
 
     // #region Not supported by the Docker SDK yet
@@ -166,28 +167,27 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
     }
     // #endregion Not supported by the Docker SDK yet
 
-    private async promisify<TRequest, TResponse, TRealResponse>(
+    private async promisify<TRequest, TResponse>(
         context: IActionContext,
-        thisArg: ContainersClient,
+        thisArg: unknown,
         clientCallback: (message: TRequest, callback: (err: unknown, response: TResponse) => void) => unknown,
         message: TRequest,
-        responseCallback: (response: TResponse) => TRealResponse,
-        token?: CancellationToken): Promise<TRealResponse> {
+        token?: CancellationToken): Promise<TResponse> {
 
-        const callPromise: Promise<TRealResponse> = new Promise((resolve, reject) => {
+        const callPromise: Promise<TResponse> = new Promise((resolve, reject) => {
             try {
                 clientCallback.call(thisArg, message, (err, response) => {
                     if (err) {
                         reject(err);
                     }
 
-                    resolve(responseCallback(response));
+                    resolve(response);
                 });
             } catch (err) {
                 reject(err);
             }
         });
 
-        return this.withTimeoutAndCancellations(context, async () => callPromise, dockerServeCallTiemout, token);
+        return this.withTimeoutAndCancellations(context, async () => callPromise, dockerServeCallTimeout, token);
     }
 }
