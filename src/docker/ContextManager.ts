@@ -90,11 +90,11 @@ export class DockerContextManager implements ContextManager, Disposable {
             const contexts = await this.contextsCache.getValue();
             const currentContext = contexts.find(c => c.Current);
 
-            if (currentContext.DockerEndpoint === 'aci') {
+            if (currentContext.DockerEndpoint === '') { // TODO: check based on type
                 if (ext.dockerClient instanceof DockerodeApiClient || ext.dockerClient === undefined) {
                     // Need to switch modes to the new SDK client
                     void ext.dockerClient?.dispose();
-                    ext.dockerClient = new DockerServeClient();
+                    ext.dockerClient = new DockerServeClient(this);
                 }
             } else {
                 if (ext.dockerClient instanceof DockerServeClient || ext.dockerClient === undefined) {
@@ -182,7 +182,11 @@ export class DockerContextManager implements ContextManager, Disposable {
                     actionContext.telemetry.properties.hostSource = 'customContextSelected'
                 }
 
-                actionContext.telemetry.properties.hostProtocol = new URL(currentContext.DockerEndpoint).protocol;
+                try {
+                    actionContext.telemetry.properties.hostProtocol = new URL(currentContext.DockerEndpoint).protocol;
+                } catch {
+                    actionContext.telemetry.properties.hostProtocol = 'unknown';
+                }
 
                 return result;
             } catch (err) {
