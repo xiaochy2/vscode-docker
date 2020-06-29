@@ -9,20 +9,27 @@ import { CancellationToken } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { DockerInfo, PruneResult } from '../Common';
 import { DockerContainer, DockerContainerInspection } from '../Containers';
+import { ContextChangeCancelClient } from "../ContextChangeCancelClient";
+import { ContextManager } from "../ContextManager";
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
 import { DockerNetwork, DockerNetworkInspection, DriverType } from '../Networks';
 import { NotSupportedError } from '../NotSupportedError';
 import { DockerVolume, DockerVolumeInspection } from '../Volumes';
 
-export class DockerServeClient implements DockerApiClient {
+// 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
+const dockerServeCallTiemout = 20 * 1000;
+
+export class DockerServeClient extends ContextChangeCancelClient implements DockerApiClient {
     private readonly containersClient: ContainersClient;
 
-    public constructor() {
+    public constructor(contextManager: ContextManager) {
+        super(contextManager);
         this.containersClient = new ContainersClient();
     }
 
     public dispose(): void {
+        super.dispose();
         void this.containersClient?.close();
     }
 
@@ -31,7 +38,7 @@ export class DockerServeClient implements DockerApiClient {
     }
 
     public async getContainers(context: IActionContext, token?: CancellationToken): Promise<DockerContainer[]> {
-        const result = await this.promisify(context, this.containersClient.list, new ListRequest(), (response: ListResponse) => response.getContainersList());
+        const result = await this.promisify(context, this.containersClient, this.containersClient.list, new ListRequest(), (response: ListResponse) => response.getContainersList(), token);
 
         return result.map(c => {
             const container = c.toObject();
@@ -53,12 +60,12 @@ export class DockerServeClient implements DockerApiClient {
             return {
                 Id: container.id,
                 Image: container.image,
-                Name: 'todo',
-                State: 'running', // TODO
+                Name: container.id, // TODO ?
+                State: container.status, // TODO ?
                 Status: container.status,
-                ImageID: 'todo',
-                CreatedTime: Date.now().valueOf() - container.cpuTime,
-                Labels: labels, // TODO
+                ImageID: undefined, // TODO ?
+                CreatedTime: Date.now().valueOf() - container.cpuTime, // TODO
+                Labels: labels, // TODO--not working
                 Ports: ports,
             };
         });
@@ -69,7 +76,7 @@ export class DockerServeClient implements DockerApiClient {
     }
 
     public async getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<NodeJS.ReadableStream> {
-        // Used only for debugging which will not work in ACI, and complicated to implement
+        // Supported by SDK, but used only for debugging which will not work in ACI, and complicated to implement
         throw new NotSupportedError(context);
     }
 
@@ -90,7 +97,7 @@ export class DockerServeClient implements DockerApiClient {
         request.setId(ref);
         request.setTimeout(5000);
 
-        return this.promisify(context, this.containersClient.stop, request, () => { });
+        return this.promisify(context, this.containersClient, this.containersClient.stop, request, () => { }, token);
     }
 
     public async removeContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
@@ -98,7 +105,7 @@ export class DockerServeClient implements DockerApiClient {
         request.setId(ref);
         request.setForce(true);
 
-        return this.promisify(context, this.containersClient.delete, request, () => { })
+        return this.promisify(context, this.containersClient, this.containersClient.delete, request, () => { }, token)
     }
 
     // #region Not supported by the Docker SDK yet
@@ -161,18 +168,26 @@ export class DockerServeClient implements DockerApiClient {
 
     private async promisify<TRequest, TResponse, TRealResponse>(
         context: IActionContext,
+        thisArg: ContainersClient,
         clientCallback: (message: TRequest, callback: (err: unknown, response: TResponse) => void) => unknown,
         message: TRequest,
-        responseCallback: (response: TResponse) => TRealResponse): Promise<TRealResponse> {
+        responseCallback: (response: TResponse) => TRealResponse,
+        token?: CancellationToken): Promise<TRealResponse> {
 
-        return new Promise((resolve, reject) => {
-            clientCallback(message, (err, response) => {
-                if (err) {
-                    reject(err);
-                }
+        const callPromise: Promise<TRealResponse> = new Promise((resolve, reject) => {
+            try {
+                clientCallback.call(thisArg, message, (err, response) => {
+                    if (err) {
+                        reject(err);
+                    }
 
-                resolve(responseCallback(response));
-            });
+                    resolve(responseCallback(response));
+                });
+            } catch (err) {
+                reject(err);
+            }
         });
+
+        return this.withTimeoutAndCancellations(context, async () => callPromise, dockerServeCallTiemout, token);
     }
 }

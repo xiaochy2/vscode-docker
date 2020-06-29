@@ -4,14 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import Dockerode = require('dockerode');
-import { Disposable } from 'vscode';
-import { IActionContext, parseError, UserCancelledError } from 'vscode-azureextensionui';
+import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { CancellationToken } from 'vscode-languageclient';
 import { localize } from '../../localize';
-import { CancellationPromiseSource, getCancelPromise, TimeoutPromiseSource } from '../../utils/promiseUtils';
 import { DockerInfo, PruneResult } from '../Common';
-import { ContainerState, DockerContainer, DockerContainerInspection } from '../Containers';
-import { ContextManager } from '../ContextManager';
+import { DockerContainer, DockerContainerInspection } from '../Containers';
+import { ContextChangeCancelClient } from '../ContextChangeCancelClient';
 import { DockerContext } from '../Contexts';
 import { DockerApiClient } from '../DockerApiClient';
 import { DockerImage, DockerImageInspection } from '../Images';
@@ -23,27 +21,12 @@ import { refreshDockerode } from './refreshDockerode';
 // 20 s timeout for all calls (enough time for a possible Dockerode refresh + the call, but short enough to be UX-reasonable)
 const dockerodeCallTimeout = 20 * 1000;
 
-export class DockerodeApiClient implements DockerApiClient {
-    private contextChangeCps: CancellationPromiseSource;
+export class DockerodeApiClient extends ContextChangeCancelClient implements DockerApiClient {
     private dockerodeClient: Dockerode;
-    private readonly contextChangedDisposable: Disposable;
 
-    public constructor(private readonly contextManager: ContextManager) {
-        this.contextChangeCps = new CancellationPromiseSource();
-
-        this.contextChangedDisposable = this.contextManager.onContextChanged((currentContext: DockerContext) => {
-            this.contextChangeCps.cancel();
-            this.contextChangeCps.dispose();
-            this.contextChangeCps = new CancellationPromiseSource();
-
-            this.dockerodeClient = refreshDockerode(currentContext);
-        });
-    }
-
-    public dispose(): void {
-        this.contextChangedDisposable.dispose();
-        this.contextChangeCps.cancel();
-        this.contextChangeCps.dispose();
+    public onContextChange(currentContext: DockerContext): void {
+        super.onContextChange(currentContext);
+        this.dockerodeClient = refreshDockerode(currentContext);
     }
 
     public async info(context: IActionContext, token?: CancellationToken): Promise<DockerInfo> {
@@ -58,7 +41,7 @@ export class DockerodeApiClient implements DockerApiClient {
                 ...ci,
                 Name: getContainerName(ci),
                 CreatedTime: ci.Created * 1000,
-                State: ci.State as ContainerState,
+                State: ci.State,
             }
         });
     }
@@ -251,36 +234,18 @@ export class DockerodeApiClient implements DockerApiClient {
     }
 
     private async callWithErrorHandling<T>(context: IActionContext, callback: () => Promise<T>, token?: CancellationToken): Promise<T> {
-        const tps = new TimeoutPromiseSource(dockerodeCallTimeout);
-        const evt = tps.onTimeout(() => {
-            context.errorHandling.suppressReportIssue = true;
-        });
-
         try {
-            const promises: Promise<T>[] = [tps.promise, this.contextChangeCps.promise, callback()];
+            return await this.withTimeoutAndCancellations(context, callback, dockerodeCallTimeout, token);
+        } catch (err) {
+            context.errorHandling.suppressReportIssue = true;
 
-            if (token) {
-                promises.push(getCancelPromise(token, UserCancelledError));
+            const error = parseError(err);
+
+            if (error?.errorType === 'ENOENT') {
+                throw new Error(localize('vscode-docker.utils.dockerode.failedToConnect', 'Failed to connect. Is Docker installed and running? Error: {0}', error.message));
             }
 
-            try {
-                return await Promise.race(promises);
-            } catch (err) {
-                if (context) {
-                    context.errorHandling.suppressReportIssue = true;
-                }
-
-                const error = parseError(err);
-
-                if (error?.errorType === 'ENOENT') {
-                    throw new Error(localize('vscode-docker.utils.dockerode.failedToConnect', 'Failed to connect. Is Docker installed and running? Error: {0}', error.message));
-                }
-
-                throw err;
-            }
-        } finally {
-            evt.dispose();
-            tps.dispose();
+            throw err;
         }
     }
 }
