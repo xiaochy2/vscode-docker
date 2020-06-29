@@ -172,13 +172,13 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
     private async promisify<TRequest, TResponse>(
         context: IActionContext,
         thisArg: unknown,
-        clientCallback: (message: TRequest, callback: (err: unknown, response: TResponse) => void) => unknown,
-        message: TRequest,
+        clientCallback: (request: TRequest, callback: (err: unknown, response: TResponse) => void) => unknown,
+        request: TRequest,
         token?: CancellationToken): Promise<TResponse> {
 
         const callPromise: Promise<TResponse> = new Promise((resolve, reject) => {
             try {
-                clientCallback.call(thisArg, message, (err, response) => {
+                clientCallback.call(thisArg, request, (err, response) => {
                     if (err) {
                         reject(err);
                     }
