@@ -5,10 +5,8 @@
 
 import { DockerObject } from './Common';
 
-export type ContainerState = 'stopped' | 'running' | 'paused' | 'starting' | 'exited' | 'created';
-
 export interface DockerContainer extends DockerObject {
-    readonly State: ContainerState;
+    readonly State: string;
     readonly Status: string;
     readonly Image: string;
     readonly ImageID: string;
