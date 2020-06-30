@@ -5,6 +5,13 @@
 
 import { DockerObject } from './Common';
 
+export interface DockerPort {
+    readonly IP?: string;
+    readonly PrivatePort?: number;
+    readonly PublicPort?: number;
+    readonly Type?: string;
+}
+
 export interface DockerContainer extends DockerObject {
     readonly State: string;
     readonly Status: string;
@@ -13,12 +20,7 @@ export interface DockerContainer extends DockerObject {
     readonly NetworkSettings?: {
         readonly Networks?: { readonly [key: string]: unknown };
     };
-    readonly Ports?: {
-        readonly IP?: string;
-        readonly PrivatePort?: number;
-        readonly PublicPort?: number;
-        readonly Type?: string;
-    }[];
+    readonly Ports?: DockerPort[];
     readonly Labels?: {
         readonly [key: string]: string;
     }

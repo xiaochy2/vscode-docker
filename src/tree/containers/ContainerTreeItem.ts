@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "vscode-azureextensionui";
-import { DockerContainer } from "../../docker/Containers";
+import { DockerContainer, DockerPort } from "../../docker/Containers";
 import { ext } from "../../extensionVariables";
 import { getThemedIconPath, IconPath } from '../IconPath';
 import { getTreeId } from "../LocalRootTreeItemBase";
@@ -50,6 +50,10 @@ export class ContainerTreeItem extends AzExtTreeItem {
 
     public get contextValue(): string {
         return this._item.State + 'Container';
+    }
+
+    public get ports(): DockerPort[] {
+        return this._item.Ports;
     }
 
     /**
