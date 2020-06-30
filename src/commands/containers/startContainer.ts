@@ -14,7 +14,7 @@ export async function startContainer(context: IActionContext, node?: ContainerTr
     nodes = await multiSelectNodes(
         { ...context, noItemFoundErrorMessage: localize('vscode-docker.commands.containers.start.noContainers', 'No containers are available to start') },
         ext.containersTree,
-        /^(created|dead|exited|paused)Container$/i,
+        /^(created|dead|exited|paused|terminated)Container$/i,
         node,
         nodes
     );

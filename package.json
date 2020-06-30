@@ -346,7 +346,7 @@
                 },
                 {
                     "command": "vscode-docker.containers.start",
-                    "when": "view == dockerContainers && viewItem =~ /^(created|dead|exited|paused)Container$/i",
+                    "when": "view == dockerContainers && viewItem =~ /^(created|dead|exited|paused|terminated)Container$/i",
                     "group": "containers_1_general@5"
                 },
                 {

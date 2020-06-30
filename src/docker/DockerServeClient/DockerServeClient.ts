@@ -62,10 +62,10 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
                 Id: container.id,
                 Image: container.image,
                 Name: container.id, // TODO ?
-                State: container.status, // TODO ?
+                State: container.status,
                 Status: container.status,
                 ImageID: undefined, // TODO ?
-                CreatedTime: Date.now().valueOf() - container.cpuTime, // TODO
+                CreatedTime: undefined, // TODO ?
                 Labels: labels, // TODO--not working
                 Ports: ports,
             };
@@ -96,6 +96,7 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
     // #endregion Not supported by the Docker SDK yet
 
     public async stopContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<void> {
+        // TODO: Stop is on the API but it returns not implemented error
         const request = new StopRequest();
         request.setId(ref);
         request.setTimeout(5000);
