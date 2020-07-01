@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Containers as ContainersClient } from "@docker/sdk";
-import { DeleteRequest, ListRequest, ListResponse, StopRequest } from "@docker/sdk/dist/containers";
+import { Container, DeleteRequest, InspectRequest, InspectResponse, ListRequest, ListResponse, StopRequest } from "@docker/sdk/dist/containers";
 import { CancellationToken } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
+import { localize } from "../../localize";
 import { DockerInfo, PruneResult } from '../Common';
-import { DockerContainer, DockerContainerInspection } from '../Containers';
+import { DockerContainer, DockerContainerInspection, InspectionPort } from '../Containers';
 import { ContextChangeCancelClient } from "../ContextChangeCancelClient";
 import { ContextManager } from "../ContextManager";
 import { DockerApiClient } from '../DockerApiClient';
@@ -41,42 +42,29 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
         const response: ListResponse = await this.promisify(context, this.containersClient, this.containersClient.list, new ListRequest(), token);
         const result = response.getContainersList();
 
-        return result.map(c => {
-            const container = c.toObject();
-            const ports = container.portsList.map(p => {
-                return {
-                    IP: p.hostIp,
-                    PublicPort: p.hostPort,
-                    PrivatePort: p.containerPort,
-                    Type: p.protocol,
-                };
-            });
+        return result.map(c => containerToDockerContainer(c.toObject()));
+    }
 
-            const labels: { [key: string]: string } = {};
-            container.labelsList.forEach(l => {
-                const [label, value] = l.split('=');
-                labels[label] = value;
-            });
+    public async inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection> {
+        const request = new InspectRequest();
+        request.setId(ref);
 
-            return {
-                Id: container.id,
-                Image: container.image,
-                Name: container.id, // TODO ?
-                State: container.status,
-                Status: container.status,
-                ImageID: undefined, // TODO ?
-                CreatedTime: undefined, // TODO ?
-                Labels: labels, // TODO--not working
-                Ports: ports,
-            };
-        });
+        const response: InspectResponse = await this.promisify(context, this.containersClient, this.containersClient.inspect, request, token);
+        const container = containerToDockerContainer(response.toObject().container);
+
+        if (!container) {
+            throw new Error(localize('vscode-docker.dockerServeClient.noContainer', 'No container with name \'{0}\' was found.', ref));
+        }
+
+        return {
+            ...container,
+            NetworkSettings: {
+                Ports: containerPortsToInspectionPorts(container),
+            },
+        };
     }
 
     // #region Not supported by the Docker SDK yet
-    public async inspectContainer(context: IActionContext, ref: string, token?: CancellationToken): Promise<DockerContainerInspection> {
-        throw new NotSupportedError(context);
-    }
-
     public async getContainerLogs(context: IActionContext, ref: string, token?: CancellationToken): Promise<NodeJS.ReadableStream> {
         // Supported by SDK, but used only for debugging which will not work in ACI, and complicated to implement
         throw new NotSupportedError(context);
@@ -193,4 +181,63 @@ export class DockerServeClient extends ContextChangeCancelClient implements Dock
 
         return this.withTimeoutAndCancellations(context, async () => callPromise, dockerServeCallTimeout, token);
     }
+}
+
+function containerToDockerContainer(container: Container.AsObject): DockerContainer | undefined {
+    if (!container) {
+        return undefined;
+    }
+
+    const ports = container.portsList.map(p => {
+        return {
+            IP: p.hostIp,
+            PublicPort: p.hostPort,
+            PrivatePort: p.containerPort,
+            Type: p.protocol,
+        };
+    });
+
+    const labels: { [key: string]: string } = {};
+    container.labelsList.forEach(l => {
+        const [label, value] = l.split('=');
+        labels[label] = value;
+    });
+
+    return {
+        Id: container.id,
+        Image: container.image,
+        Name: container.id, // TODO ?
+        State: container.status,
+        Status: container.status,
+        ImageID: undefined, // TODO ?
+        CreatedTime: undefined, // TODO ?
+        Labels: labels, // TODO--not working
+        Ports: ports,
+    };
+}
+
+function containerPortsToInspectionPorts(container: DockerContainer): { [portAndProtocol: string]: InspectionPort[] } | undefined {
+    if (container?.Ports === undefined) {
+        return undefined;
+    }
+
+    const result: { [portAndProtocol: string]: InspectionPort[] } = {};
+
+    for (const port of container.Ports) {
+        // Get the key
+        const key = `${port.PrivatePort}/${port.Type}`;
+
+        // If there's no entries for this key yet, create an empty list
+        if (result[key] === undefined) {
+            result[key] = [];
+        }
+
+        // Add the value to the list
+        result[key].push({
+            HostIp: port.IP,
+            HostPort: port.PublicPort.toString(),
+        });
+    }
+
+    return result;
 }
