@@ -35,9 +35,9 @@ const WindowsLocalPipe = 'npipe:////./pipe/docker_engine';
 const UnixLocalPipe = 'unix:///var/run/docker.sock';
 
 const defaultContext: Partial<DockerContext> = {
+    Id: 'default',
     Name: 'default',
     Description: 'Current DOCKER_HOST based configuration',
-    CreatedTime: undefined, // Not defined for contexts
 };
 
 export interface ContextManager {
@@ -171,7 +171,11 @@ export class DockerContextManager implements ContextManager, Disposable {
                 const lines = LineSplitter.splitLines(stdout);
 
                 for (const line of lines) {
-                    result.push(JSON.parse(line) as DockerContext);
+                    const context = JSON.parse(line) as DockerContext;
+                    result.push({
+                        ...context,
+                        Id: context.Name,
+                    });
                 }
 
                 const currentContext = result.find(c => c.Current);
