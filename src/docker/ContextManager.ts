@@ -26,7 +26,7 @@ import { DockerServeClient } from './DockerServeClient/DockerServeClient';
 // Consider having our own timeout for execution of any context-related Docker CLI commands.
 // The following timeout is for _starting_ the command only; in the current implementation there is no timeot
 // for command duration.
-const ContextCmdExecOptions: ExecOptions = { timeout: 5000 }
+const ContextCmdExecOptions: ExecOptions = { timeout: 5000 };
 
 const dockerConfigFile = path.join(os.homedir(), '.docker', 'config.json');
 const dockerContextsFolder = path.join(os.homedir(), '.docker', 'contexts', 'meta');
@@ -71,6 +71,8 @@ export class DockerContextManager implements ContextManager, Disposable {
     public dispose(): void {
         void this.configFileWatcher?.close();
         void this.contextFolderWatcher?.close();
+
+        // No event is fired so the client present at the end needs to be disposed manually
         void ext.dockerClient?.dispose();
     }
 
@@ -90,20 +92,16 @@ export class DockerContextManager implements ContextManager, Disposable {
             const contexts = await this.contextsCache.getValue();
             const currentContext = contexts.find(c => c.Current);
 
-            if (currentContext.DockerEndpoint === '') { // TODO: check based on type
-                if (ext.dockerClient instanceof DockerodeApiClient || ext.dockerClient === undefined) {
-                    // Need to switch modes to the new SDK client
-                    void ext.dockerClient?.dispose();
-                    ext.dockerClient = new DockerServeClient(this);
-                }
+            void ext.dockerClient?.dispose();
+
+            // Create a new client
+            if (currentContext.Type === 'aci') {
+                ext.dockerClient = new DockerServeClient();
             } else {
-                if (ext.dockerClient instanceof DockerServeClient || ext.dockerClient === undefined) {
-                    // Need to switch modes to the Dockerode client
-                    void ext.dockerClient?.dispose();
-                    ext.dockerClient = new DockerodeApiClient(this);
-                }
+                ext.dockerClient = new DockerodeApiClient(currentContext);
             }
 
+            // This will refresh the tree
             this.emitter.fire(currentContext);
         } finally {
             this.refreshing = false;
@@ -167,7 +165,7 @@ export class DockerContextManager implements ContextManager, Disposable {
 
                 // No value for DOCKER_HOST, and multiple contexts exist, so check them
                 const result: DockerContext[] = [];
-                const { stdout } = await execAsync('docker context ls --format="{{json .}}"', { timeout: 10000 });
+                const { stdout } = await execAsync('docker context ls --format="{{json .}}"', ContextCmdExecOptions);
                 const lines = LineSplitter.splitLines(stdout);
 
                 for (const line of lines) {
@@ -175,6 +173,7 @@ export class DockerContextManager implements ContextManager, Disposable {
                     result.push({
                         ...context,
                         Id: context.Name,
+                        Type: context.Type || context.DockerEndpoint ? 'moby' : 'aci', // TODO: this basically assumes no Type and no DockerEndpoint => aci
                     });
                 }
 
