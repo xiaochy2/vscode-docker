@@ -203,7 +203,7 @@ class TestTerminal implements vscode.Terminal {
 function bufferToString(buffer: Buffer): string {
     if (buffer.length > 2 && buffer[0] === 0xff && buffer[1] === 0xfe) {
         // Buffer is in UTF-16 format (happens in some shells)
-        return buffer.toString("utf-16le");
+        return buffer.toString("utf-16le" as any);
     }
 
     return buffer.toString();

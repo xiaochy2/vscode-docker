@@ -58,6 +58,7 @@ export type DockerRunContainerOptions = {
     networkAlias?: string;
     ports?: DockerContainerPort[];
     volumes?: DockerContainerVolume[];
+    gpus?: string;
 };
 
 export type DockerVersionOptions = {
@@ -236,6 +237,7 @@ export class CliDockerClient implements DockerClient {
             .withArrayArgs('-p', options.ports, port => `${port.hostPort ? port.hostPort + ':' : ''}${port.containerPort}${port.protocol ? '/' + port.protocol : ''}`)
             .withArrayArgs('--add-host', options.extraHosts, extraHost => `${extraHost.hostname}:${extraHost.ip}`)
             .withNamedArg('--entrypoint', options.entrypoint)
+            .withNamedArg('--gpus', options.gpus)
             .withQuotedArg(imageTagOrId)
             .withArgs(options.command)
             .build();

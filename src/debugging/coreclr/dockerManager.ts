@@ -224,7 +224,8 @@ export class DefaultDockerManager implements DockerManager {
                         network: options.network,
                         networkAlias: options.networkAlias,
                         ports: options.ports,
-                        volumes: [...(additionalVolumes || []), ...(options.volumes || [])]
+                        volumes: [...(additionalVolumes || []), ...(options.volumes || [])],
+                        gpus: options.gpus,
                     });
             },
             id => localize('vscode-docker.debug.coreclr.containerStarted', 'Container {0} started.', this.dockerClient.trimId(id)),
